@@ -33,7 +33,8 @@ describe("buildAuthorizeUrl", () => {
       state: "st",
       code_challenge_method: "S256",
       code_challenge: "ch",
-      scope: "playlist-read-private playlist-read-collaborative playlist-modify-private user-library-read",
+      scope:
+        "playlist-read-private playlist-read-collaborative playlist-modify-private user-library-read",
     });
   });
 });
@@ -46,9 +47,16 @@ describe("exchangeCode", () => {
       body: { access_token: "AT", refresh_token: "RT", expires_in: 3600, scope: "s1 s2" },
     }));
     const t = await exchangeCode(cfg, { code: "the-code", verifier: "ver" });
-    expect(t).toEqual({ accessToken: "AT", refreshToken: "RT", expiresAt: 1_000_000 + 3_600_000, scope: "s1 s2" });
+    expect(t).toEqual({
+      accessToken: "AT",
+      refreshToken: "RT",
+      expiresAt: 1_000_000 + 3_600_000,
+      scope: "s1 s2",
+    });
     const call = fake.calls[0]!;
-    expect(call.headers.authorization).toBe(`Basic ${Buffer.from("cid:csecret").toString("base64")}`);
+    expect(call.headers.authorization).toBe(
+      `Basic ${Buffer.from("cid:csecret").toString("base64")}`,
+    );
     expect(call.headers["content-type"]).toContain("application/x-www-form-urlencoded");
     expect(Object.fromEntries(new URLSearchParams(call.rawBody))).toEqual({
       grant_type: "authorization_code",
@@ -61,7 +69,9 @@ describe("exchangeCode", () => {
 
 describe("refreshAccessToken", () => {
   it("keeps the old refresh token when the response omits it", async () => {
-    fake.on("POST", /^\/api\/token$/, () => ({ body: { access_token: "AT2", expires_in: 3600, scope: "s" } }));
+    fake.on("POST", /^\/api\/token$/, () => ({
+      body: { access_token: "AT2", expires_in: 3600, scope: "s" },
+    }));
     const t = await refreshAccessToken(cfg, "OLD_RT");
     expect(t.accessToken).toBe("AT2");
     expect(t.refreshToken).toBe("OLD_RT");
@@ -72,7 +82,9 @@ describe("refreshAccessToken", () => {
   });
 
   it("uses a rotated refresh token when one is returned", async () => {
-    fake.on("POST", /^\/api\/token$/, () => ({ body: { access_token: "AT2", refresh_token: "NEW", expires_in: 1, scope: "s" } }));
+    fake.on("POST", /^\/api\/token$/, () => ({
+      body: { access_token: "AT2", refresh_token: "NEW", expires_in: 1, scope: "s" },
+    }));
     expect((await refreshAccessToken(cfg, "OLD_RT")).refreshToken).toBe("NEW");
   });
 

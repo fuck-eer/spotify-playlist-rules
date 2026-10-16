@@ -55,11 +55,16 @@ interface RawPlaylist {
 }
 
 export async function getMe(c: SpotifyClient): Promise<Me> {
-  const { data } = await c.request<{ id: string; account_id?: string | null; display_name?: string | null }>(
-    "GET",
-    "/me",
-  );
-  return { id: data.id, accountId: data.account_id ?? null, displayName: data.display_name ?? null };
+  const { data } = await c.request<{
+    id: string;
+    account_id?: string | null;
+    display_name?: string | null;
+  }>("GET", "/me");
+  return {
+    id: data.id,
+    accountId: data.account_id ?? null,
+    displayName: data.display_name ?? null,
+  };
 }
 
 /** ADR-0011: local files, non-tracks, and entries without a uri are Unavailable tracks (null). */

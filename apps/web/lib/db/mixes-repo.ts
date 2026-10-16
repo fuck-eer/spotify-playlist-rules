@@ -45,7 +45,6 @@ interface DbRow {
   updated_at: Date;
 }
 
-
 function toRow(r: DbRow): MixRow {
   return {
     id: r.id,

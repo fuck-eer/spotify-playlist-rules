@@ -7,7 +7,13 @@ describe("palette", () => {
     expect(new Set(RULE_COLORS).size).toBe(10);
   });
   it("starts with the mockup's 5 colours", () => {
-    expect(RULE_COLORS.slice(0, 5)).toEqual(["#e8b04b", "#7aa7ff", "#e57a9a", "#9ad08a", "#c9a3f0"]);
+    expect(RULE_COLORS.slice(0, 5)).toEqual([
+      "#e8b04b",
+      "#7aa7ff",
+      "#e57a9a",
+      "#9ad08a",
+      "#c9a3f0",
+    ]);
   });
   it("maps index to colour and throws outside 0-9", () => {
     expect(ruleColor(0)).toBe("#e8b04b");

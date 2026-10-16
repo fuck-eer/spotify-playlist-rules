@@ -16,7 +16,11 @@ export interface TokenStore {
 export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
 
 export interface SpotifyClient {
-  request<T>(method: HttpMethod, path: string, body?: unknown): Promise<{ status: number; data: T }>;
+  request<T>(
+    method: HttpMethod,
+    path: string,
+    body?: unknown,
+  ): Promise<{ status: number; data: T }>;
   readonly stats: { requests: number; retries429: number };
 }
 
@@ -69,7 +73,8 @@ export function createClient(cfg: SpotifyConfig, store: TokenStore): SpotifyClie
 
       if (status === 401) {
         const errBody = await readBody(res);
-        if (refreshedOn401) throw new SpotifyAuthError("Spotify rejected the access token", status, errBody);
+        if (refreshedOn401)
+          throw new SpotifyAuthError("Spotify rejected the access token", status, errBody);
         refreshedOn401 = true;
         token = await refresh(token);
         continue;
@@ -86,9 +91,12 @@ export function createClient(cfg: SpotifyConfig, store: TokenStore): SpotifyClie
         continue;
       }
       const data = status === 204 ? null : await readBody(res);
-      if (status === 403) throw new SpotifyForbiddenError(`Spotify ${method} ${path}: 403`, status, data);
-      if (status === 404) throw new SpotifyNotFoundError(`Spotify ${method} ${path}: 404`, status, data);
-      if (status >= 400) throw new SpotifyHttpError(`Spotify ${method} ${path}: ${status}`, status, data);
+      if (status === 403)
+        throw new SpotifyForbiddenError(`Spotify ${method} ${path}: 403`, status, data);
+      if (status === 404)
+        throw new SpotifyNotFoundError(`Spotify ${method} ${path}: 404`, status, data);
+      if (status >= 400)
+        throw new SpotifyHttpError(`Spotify ${method} ${path}: ${status}`, status, data);
       return { status, data: data as T };
     }
   }

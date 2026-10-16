@@ -3,7 +3,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { DotLine, type DotItem } from "./dot-line";
 
 afterEach(cleanup);
-const items = (n: number): DotItem[] => Array.from({ length: n }, (_, i) => ({ key: String(i), color: "#555555" }));
+const items = (n: number): DotItem[] =>
+  Array.from({ length: n }, (_, i) => ({ key: String(i), color: "#555555" }));
 
 describe("DotLine", () => {
   it("caps at maxDots and shows +n more", () => {
@@ -16,7 +17,12 @@ describe("DotLine", () => {
     expect(screen.getByText("3×")).toBeTruthy();
   });
   it("renders badge text and label", () => {
-    const { container } = render(<DotLine items={[{ key: "a", color: "#e8b04b", label: "#1", badge: "moved from #4" }]} ariaLabel="line" />);
+    const { container } = render(
+      <DotLine
+        items={[{ key: "a", color: "#e8b04b", label: "#1", badge: "moved from #4" }]}
+        ariaLabel="line"
+      />,
+    );
     expect(screen.getAllByText("moved from #4").length).toBeGreaterThan(0);
     expect(container.querySelector("title")?.textContent).toContain("moved from #4");
     expect(screen.getByText("#1")).toBeTruthy();

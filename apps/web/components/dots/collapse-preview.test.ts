@@ -2,11 +2,17 @@ import { describe, expect, it } from "vitest";
 import { NEUTRAL_DOT, ruleColor } from "@/lib/palette";
 import { previewToDots } from "./collapse-preview";
 
-const s = (uri: string, ruleIndex: number | null, shiftedFrom: number | null = null) => ({ uri, ruleIndex, shiftedFrom });
+const s = (uri: string, ruleIndex: number | null, shiftedFrom: number | null = null) => ({
+  uri,
+  ruleIndex,
+  shiftedFrom,
+});
 
 describe("previewToDots", () => {
   it("collapses a repeat run of 3 into one looped dot", () => {
-    const dots = previewToDots([s("a", null), s("r", 0), s("r", 0), s("r", 0), s("b", null)], {}, ["repeat"]);
+    const dots = previewToDots([s("a", null), s("r", 0), s("r", 0), s("r", 0), s("b", null)], {}, [
+      "repeat",
+    ]);
     expect(dots).toHaveLength(3);
     expect(dots[1]).toMatchObject({ loop: 3, color: ruleColor(0), label: "#1", key: "1" });
   });

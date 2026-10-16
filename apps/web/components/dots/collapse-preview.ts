@@ -3,7 +3,11 @@ import { NEUTRAL_DOT, ruleColor } from "@/lib/palette";
 import type { DotItem } from "./dot-line";
 
 /** Turns Preview slots into dots; a back-to-back repeat run becomes one looped dot. */
-export function previewToDots(preview: PreviewSlot[], names: Record<string, string>, kinds: RuleKind[]): DotItem[] {
+export function previewToDots(
+  preview: PreviewSlot[],
+  names: Record<string, string>,
+  kinds: RuleKind[],
+): DotItem[] {
   const out: DotItem[] = [];
   for (let i = 0; i < preview.length; i++) {
     const slot = preview[i]!;

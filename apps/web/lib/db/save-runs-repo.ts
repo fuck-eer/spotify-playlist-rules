@@ -140,7 +140,11 @@ export async function finishRun(
 }
 
 /** Marks the Mix's running runs with no heartbeat for STALE_RUN_MINUTES as failed. */
-export async function failStaleRuns(sql: postgres.Sql, userId: string, mixId: string): Promise<void> {
+export async function failStaleRuns(
+  sql: postgres.Sql,
+  userId: string,
+  mixId: string,
+): Promise<void> {
   if (!isUuid(mixId)) return;
   await sql`
     update save_runs sr set status = 'failed', error = ${SAVE_FAILED},

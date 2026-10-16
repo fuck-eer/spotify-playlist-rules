@@ -6,7 +6,13 @@ import { NEUTRAL_DOT, RULE_COLORS, ruleColor } from "@/lib/palette";
 
 const SAMPLE: DotItem[] = Array.from({ length: 30 }, (_, i) => {
   if (i === 0) return { key: "0", color: ruleColor(0), label: "#1" };
-  if (i % 5 === 4) return { key: String(i), color: ruleColor(1), label: "#2", ...(i === 14 ? { badge: "moved from #14" } : {}) };
+  if (i % 5 === 4)
+    return {
+      key: String(i),
+      color: ruleColor(1),
+      label: "#2",
+      ...(i === 14 ? { badge: "moved from #14" } : {}),
+    };
   if (i === 7) return { key: "7", color: ruleColor(2), label: "#3", loop: 3 };
   return { key: String(i), color: NEUTRAL_DOT };
 });
@@ -21,8 +27,13 @@ export default function DevComponentsPage(): JSX.Element {
         <div className="flex flex-wrap gap-3">
           {RULE_COLORS.map((c, i) => (
             <div key={c} className="flex flex-col items-center gap-1">
-              <span className="block size-8 rounded-full" style={{ background: `var(--color-r${i + 1})` }} />
-              <span className="text-dim font-mono text-[10px]">R{i + 1} {c}</span>
+              <span
+                className="block size-8 rounded-full"
+                style={{ background: `var(--color-r${i + 1})` }}
+              />
+              <span className="text-dim font-mono text-[10px]">
+                R{i + 1} {c}
+              </span>
             </div>
           ))}
         </div>

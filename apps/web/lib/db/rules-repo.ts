@@ -31,7 +31,6 @@ interface DbRow {
   updated_at: Date;
 }
 
-
 function toRow(r: DbRow): RuleRow {
   return {
     id: r.id,

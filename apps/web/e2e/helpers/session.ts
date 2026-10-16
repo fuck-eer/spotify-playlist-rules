@@ -24,17 +24,15 @@ export async function seedSession(page: Page): Promise<{ userId: string }> {
     await sql`
       insert into sessions (id_hash, user_id, expires_at)
       values (${createHash("sha256").update(raw).digest("hex")}, ${userId}, now() + interval '1 day')`;
-    await page
-      .context()
-      .addCookies([
-        {
-          name: SESSION_COOKIE,
-          value: raw,
-          url: `http://127.0.0.1:${process.env.E2E_PORT ?? 3000}`,
-          httpOnly: true,
-          sameSite: "Lax",
-        },
-      ]);
+    await page.context().addCookies([
+      {
+        name: SESSION_COOKIE,
+        value: raw,
+        url: `http://127.0.0.1:${process.env.E2E_PORT ?? 3000}`,
+        httpOnly: true,
+        sameSite: "Lax",
+      },
+    ]);
     return { userId };
   } finally {
     await sql.end({ timeout: 1 });

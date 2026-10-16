@@ -4,7 +4,8 @@ import { DRAFT_DOT, NEUTRAL_DOT } from "@/lib/palette";
 import { RuleIntentGraphic } from "./rule-intent-graphic";
 
 afterEach(cleanup);
-const fills = (c: HTMLElement) => Array.from(c.querySelectorAll("circle")).map((e) => e.getAttribute("fill"));
+const fills = (c: HTMLElement) =>
+  Array.from(c.querySelectorAll("circle")).map((e) => e.getAttribute("fill"));
 
 describe("RuleIntentGraphic", () => {
   it("every_n n=4 colours indices 4 and 9", () => {
@@ -13,7 +14,9 @@ describe("RuleIntentGraphic", () => {
     f.forEach((x, i) => expect(x).toBe(i === 4 || i === 9 ? DRAFT_DOT : NEUTRAL_DOT));
   });
   it("pin_first colours index 0", () => {
-    const f = fills(render(<RuleIntentGraphic kind="pin_first" n={null} color="#e8b04b" />).container);
+    const f = fills(
+      render(<RuleIntentGraphic kind="pin_first" n={null} color="#e8b04b" />).container,
+    );
     expect(f[0]).toBe("#e8b04b");
     expect(f.slice(1).every((x) => x === NEUTRAL_DOT)).toBe(true);
   });

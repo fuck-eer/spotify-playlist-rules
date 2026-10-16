@@ -36,7 +36,10 @@ async function targetExists(c: SpotifyClient, id: string): Promise<boolean> {
 }
 
 /** Write an engine result into a Mix's Target playlist, creating or recreating it as needed. */
-export async function writeTarget(c: SpotifyClient, input: WriteTargetInput): Promise<WriteTargetResult> {
+export async function writeTarget(
+  c: SpotifyClient,
+  input: WriteTargetInput,
+): Promise<WriteTargetResult> {
   const { targetPlaylistId, defaultName, uris, onProgress } = input;
   let playlistId = targetPlaylistId;
   let created = false;
@@ -54,10 +57,20 @@ export async function writeTarget(c: SpotifyClient, input: WriteTargetInput): Pr
   let written = 0;
   do {
     const chunk = uris.slice(written, written + WRITE_CHUNK);
-    const { data } = await c.request<{ snapshot_id: string }>(written === 0 ? "PUT" : "POST", path, { uris: chunk });
+    const { data } = await c.request<{ snapshot_id: string }>(
+      written === 0 ? "PUT" : "POST",
+      path,
+      { uris: chunk },
+    );
     snapshotId = data.snapshot_id;
     written += chunk.length;
     onProgress?.(written, uris.length);
   } while (written < uris.length);
-  return { playlistId, snapshotId, created, recreated: created && targetPlaylistId !== null, tracksWritten: written };
+  return {
+    playlistId,
+    snapshotId,
+    created,
+    recreated: created && targetPlaylistId !== null,
+    tracksWritten: written,
+  };
 }
