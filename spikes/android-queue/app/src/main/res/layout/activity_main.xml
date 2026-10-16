@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="12dp">
+    <TextView android:id="@+id/status" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:text="Not connected" android:textStyle="bold" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content">
+        <Button android:id="@+id/login" android:layout_width="0dp" android:layout_weight="1"
+            android:layout_height="wrap_content" android:text="LOGIN" />
+        <Button android:id="@+id/loginBrowser" android:layout_width="0dp" android:layout_weight="1"
+            android:layout_height="wrap_content" android:text="LOGIN (browser)" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content">
+        <Button android:id="@+id/connect" android:layout_width="0dp" android:layout_weight="1"
+            android:layout_height="wrap_content" android:text="Connect" />
+        <Button android:id="@+id/runQueue" android:layout_width="0dp" android:layout_weight="1"
+            android:layout_height="wrap_content" android:text="Test 1: A,B,B,C,A" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content">
+        <Button android:id="@+id/runReplace" android:layout_width="0dp" android:layout_weight="1"
+            android:layout_height="wrap_content" android:text="Test 2: replace" />
+        <Button android:id="@+id/runIndex" android:layout_width="0dp" android:layout_weight="1"
+            android:layout_height="wrap_content" android:text="Test 3: state" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content">
+        <Button android:id="@+id/prev" android:layout_width="0dp" android:layout_weight="1"
+            android:layout_height="wrap_content" android:text="⏮ Prev" />
+        <Button android:id="@+id/pause" android:layout_width="0dp" android:layout_weight="1"
+            android:layout_height="wrap_content" android:text="⏯" />
+        <Button android:id="@+id/next" android:layout_width="0dp" android:layout_weight="1"
+            android:layout_height="wrap_content" android:text="Next ⏭" />
+        <Button android:id="@+id/clear" android:layout_width="0dp" android:layout_weight="1"
+            android:layout_height="wrap_content" android:text="Clr log" />
+    </LinearLayout>
+    <ScrollView android:id="@+id/scroll" android:layout_width="match_parent"
+        android:layout_height="0dp" android:layout_weight="1">
+        <TextView android:id="@+id/log" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:fontFamily="monospace"
+            android:textIsSelectable="true" android:textSize="12sp" />
+    </ScrollView>
+</LinearLayout>
