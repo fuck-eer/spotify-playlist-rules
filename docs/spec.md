@@ -190,6 +190,9 @@ Constraints:
 - `started_at`, `finished_at`
 - `status`
 - `error`
+- `phase`
+- `done`
+- `total`
 - `tracks_written`
 - `recreated` (bool)
 - `retries_429`
@@ -211,7 +214,7 @@ Every row is scoped by user, and access goes through server route handlers with 
 - **Mixes:** CRUD. Rules within a Mix can be added, reordered, removed and have their song set.
 - **Reshuffle:** generates a new seed.
 - **Preview:** the server reads the source and runs the engine. Regenerate calls this.
-- **Save:** runs the engine, then writes the target (creating or recreating it if missing) with progress, using streaming or polling (A5).
+- **Save:** runs the engine, then writes the target (creating or recreating it if missing) as a background run. It returns `{ runId }`, and the run's status endpoint is polled every 1 second (A5).
 
 ### Save algorithm
 1. If there is no `target_playlist_id`, or the stored target no longer exists or isn't followed, create `Rules: <mix name>` (private) and store the id. If this is a recreation, set `recreated=true`.
@@ -282,12 +285,14 @@ An empty result clears the target.
 - Autoplay after the last track, saving mid-play, the 6-month refresh-token expiry, the dev-mode 5-user cap, and the unknown Premium requirement for end users all stand (research §9).
 - `/me` no longer returns `product`; research suggests `account_id` as the stable key (see A3).
 
-## Assumptions (not decided by Nishchay; confirm)
-- **A1 Repeat placement.** The N back-to-back copies start at the song's desired slot. The mockup inserts at the song's original position in the source, scaled to the final list, or at slot 6 if absent; that is illustrative only. The spec uses: the start slot is the song's index in the (ordered) source before removal, clamped to fit. *Undecided.*
+## Confirmed decisions
+
+Approved by Nishchay on 2026-10-16. They were previously listed as assumptions A1–A11, and those IDs are kept for reference.
+- **A1 Repeat placement.** The N back-to-back copies start at the song's desired slot. The mockup inserts at the song's original position in the source, scaled to the final list, or at slot 6 if absent; that is illustrative only. The spec uses: the start slot is the song's index in the (ordered) source before removal, clamped to fit.
 - **A2 Unavailable rule song.** The rule places nothing and shows the warning, and the rest of the Mix still builds.
-- **A3 User key.** ADR-0008 says "Spotify user id". Research says `/me` now exposes `account_id` (May 2026) as the stable key. The spec keys on the `/me` `id`, with `account_id` stored too if present. *Confirm.*
+- **A3 User key.** ADR-0008 says "Spotify user id". Research says `/me` now exposes `account_id` (May 2026) as the stable key. The spec keys on the `/me` `id`, with `account_id` stored too if present.
 - **A4 Data access.** Server-only access with a service role, plus RLS enabled as defence in depth.
-- **A5 Progress transport.** Streaming response or polling of `save_runs`; left to implementation.
+- **A5 Progress transport.** Save starts a run and returns its `save_runs` id immediately. The browser polls the run's status endpoint every 1 second until the status is `succeeded` or `failed`. The `save_runs` row stores `phase` (reading | writing | done), `done` and `total`, and these drive the progress display.
 - **A6 Read page size.** Reads use Spotify's maximum (50 for playlist items and Liked Songs per research). ADR-0017 says 100s, so the spec applies 100 to writes.
 - **A7 Collision toggle dropped.** ADR-0005 makes remove-from-base fixed, so the mockup's toggle is removed.
 - **A8 Scopes.** The four scopes from the plan, without playlist-modify-public, because targets are private.

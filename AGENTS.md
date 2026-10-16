@@ -27,7 +27,7 @@ docs/
 - **TDD:** write a failing test first, make it pass, then refactor. The rule engine must stay a pure, unit-tested function.
 - **Before every commit:** run the typecheck and the full test suite; both must pass. Never commit with failing checks.
 - Small, focused commits with descriptive messages.
-- Coding standards: not defined yet (no `CODING_STANDARDS.md` until the stack is chosen).
+- Coding standards: see `CODING_STANDARDS.md`.
 
 ## Agent skills
 
