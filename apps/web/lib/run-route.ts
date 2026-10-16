@@ -35,7 +35,7 @@ export async function startRunResponse(
     if (!started.ok && started.reason === "in_progress") {
       return Response.json(
         {
-          error: { code: "save_in_progress", message: "This mix is already being written." },
+          error: { code: "run_in_progress", message: "This mix is already being written." },
           runId: started.runId,
         },
         { status: 409 },

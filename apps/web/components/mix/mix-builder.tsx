@@ -107,7 +107,7 @@ export function MixBuilder({
   const [previewTick, setPreviewTick] = useState(0);
   const previewReq = useRef(0);
   const refreshPreview = () => setPreviewTick((t) => t + 1);
-  const [saveRunId, setSaveRunId] = useState<string | null>(null);
+  const [runId, setRunId] = useState<string | null>(null);
   const [saveRun, setSaveRun] = useState<SaveRunRow | null>(null);
   const [startingSave, setStartingSave] = useState(false);
   // Ref guard: the toast's Retry closure outlives the render that created it.
@@ -384,7 +384,7 @@ export function MixBuilder({
         if (body.runId) {
           started = true;
           setSaveRun(null);
-          setSaveRunId(body.runId);
+          setRunId(body.runId);
           return;
         }
       }
@@ -403,12 +403,12 @@ export function MixBuilder({
 
   // Poll the run every 1 s while it is running (spec A5).
   useEffect(() => {
-    if (!mixId || !saveRunId) return;
+    if (!mixId || !runId) return;
     let stopped = false;
     const timer = setInterval(() => {
       void (async () => {
         try {
-          const res = await fetch(`/api/mixes/${mixId}/save/${saveRunId}`);
+          const res = await fetch(`/api/mixes/${mixId}/save/${runId}`);
           if (stopped || !res.ok) return;
           const { run } = (await res.json()) as { run: SaveRunRow };
           if (stopped) return;
@@ -417,7 +417,7 @@ export function MixBuilder({
           stopped = true;
           clearInterval(timer);
           saveBusy.current = false;
-          setSaveRunId(null);
+          setRunId(null);
           setSaveRun(null);
           if (run.status === "succeeded" && run.kind === "play") {
             // A dialog with a real link the user taps: opening after the poll has no user
@@ -445,7 +445,7 @@ export function MixBuilder({
       clearInterval(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- one poller per run; savedName/router changes must not restart it
-  }, [mixId, saveRunId]);
+  }, [mixId, runId]);
 
   async function showSaved(): Promise<void> {
     if (!mixId) return;
@@ -462,7 +462,7 @@ export function MixBuilder({
     }
   }
 
-  const saving = startingSave || saveRunId !== null;
+  const saving = startingSave || runId !== null;
   const unavailable = new Set(
     (preview.data?.issues ?? [])
       .filter((i) => i.kind === "unavailable_rule_song")

@@ -92,7 +92,7 @@ describe.skipIf(!reachable)("play route", () => {
     const { runId } = (await saving.json()) as { runId: string };
     const res = await play();
     expect(res.status).toBe(409);
-    expect(await res.json()).toMatchObject({ runId });
+    expect(await res.json()).toMatchObject({ error: { code: "run_in_progress" }, runId });
     release();
     await Promise.all(tasks.splice(0));
   });

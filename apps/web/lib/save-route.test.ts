@@ -79,7 +79,7 @@ describe.skipIf(!reachable)("save routes", () => {
 
     const again = await post();
     expect(again.status).toBe(409);
-    expect(await again.json()).toMatchObject({ error: { code: "save_in_progress" }, runId });
+    expect(await again.json()).toMatchObject({ error: { code: "run_in_progress" }, runId });
 
     const running = await getRunRoute(
       req(`/api/mixes/${mixId}/save/${runId}`, cookie),
