@@ -33,6 +33,16 @@ describe.skipIf(!reachable)("save routes", () => {
   const post = () =>
     saveRoute(req(`/api/mixes/${mixId}/save`, cookie, { method: "POST" }), ctx({ id: mixId }));
 
+  /** Waits until the background save is parked on the gated write, then backdates its heartbeat. */
+  async function makeStale(runId: string): Promise<void> {
+    for (let i = 0; i < 200; i++) {
+      const [r] = await sql<{ phase: string }[]>`select phase from save_runs where id = ${runId}`;
+      if (r?.phase === "writing") break;
+      await new Promise((res) => setTimeout(res, 10));
+    }
+    await sql`update save_runs set updated_at = now() - interval '6 minutes' where id = ${runId}`;
+  }
+
   beforeAll(async () => {
     ({ fake, restore } = await startRouteHarness());
   });
@@ -87,6 +97,43 @@ describe.skipIf(!reachable)("save routes", () => {
       status: "succeeded",
       tracksWritten: 3,
     });
+  });
+
+  it("a stale running run no longer blocks: POST starts a new run and GET reports the stale one failed", async () => {
+    const { runId: staleId } = (await (await post()).json()) as { runId: string };
+    await makeStale(staleId);
+    const res = await post();
+    expect(res.status).toBe(202);
+    const { runId } = (await res.json()) as { runId: string };
+    expect(runId).not.toBe(staleId);
+    const stale = await getRunRoute(
+      req(`/api/mixes/${mixId}/save/${staleId}`, cookie),
+      ctx({ id: mixId, runId: staleId }),
+    );
+    expect(((await stale.json()) as { run: SaveRunRow }).run.status).toBe("failed");
+    release();
+    await Promise.all(tasks.splice(0));
+    // The zombie save finishing later must not flip the stale run back to succeeded.
+    const after = await getRunRoute(
+      req(`/api/mixes/${mixId}/save/${staleId}`, cookie),
+      ctx({ id: mixId, runId: staleId }),
+    );
+    expect(((await after.json()) as { run: SaveRunRow }).run.status).toBe("failed");
+  });
+
+  it("GET reports a stale run as failed even without a new POST", async () => {
+    const { runId } = (await (await post()).json()) as { runId: string };
+    await makeStale(runId);
+    const res = await getRunRoute(
+      req(`/api/mixes/${mixId}/save/${runId}`, cookie),
+      ctx({ id: mixId, runId }),
+    );
+    expect(((await res.json()) as { run: SaveRunRow }).run).toMatchObject({
+      status: "failed",
+      error: "Couldn't create the playlist. Check your connection and retry.",
+    });
+    release();
+    await Promise.all(tasks.splice(0));
   });
 
   it("GET of another user's run is 404", async () => {

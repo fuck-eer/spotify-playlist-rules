@@ -3,11 +3,11 @@ import { SpotifyAuthError, targetName, writeTarget, type SpotifyClient } from "@
 import type postgres from "postgres";
 import { listMixRules } from "./db/mix-rules-repo";
 import { getMix, updateMix } from "./db/mixes-repo";
-import { finishRun, updateRun, type RunPatch } from "./db/save-runs-repo";
+import { finishRun, SAVE_FAILED, updateRun, type RunPatch } from "./db/save-runs-repo";
 import { HttpError } from "./http";
 import { readSourceTracks } from "./source-tracks";
 
-export const SAVE_FAILED = "Couldn't create the playlist. Check your connection and retry.";
+export { SAVE_FAILED };
 export const SAVE_REAUTH = "Spotify access expired. Sign in again.";
 
 function userMessage(e: unknown): string {

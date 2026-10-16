@@ -34,6 +34,11 @@ interface DbRow {
   finished_at: Date | null;
 }
 
+/** User-safe copy for a failed save (also used for stale runs). */
+export const SAVE_FAILED = "Couldn't create the playlist. Check your connection and retry.";
+/** A running save with no progress for this long is treated as dead (crash or timeout). */
+export const STALE_RUN_MINUTES = 5;
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const COLS =
   "sr.id, sr.mix_id, sr.status, sr.phase, sr.done, sr.total, sr.tracks_written, sr.recreated, sr.retries_429, sr.error, sr.started_at, sr.finished_at";
@@ -98,10 +103,11 @@ export async function updateRun(
   if (patch.retries429 !== undefined) set.retries_429 = patch.retries429;
   const cols = Object.keys(set);
   if (cols.length === 0) return;
+  // Bumps the heartbeat; finished runs are left alone.
   await sql`
-    update save_runs sr set ${sql(set, cols)}
+    update save_runs sr set ${sql(set, cols)}, updated_at = now()
     from mixes m
-    where sr.id = ${id} and m.id = sr.mix_id and m.user_id = ${userId}`;
+    where sr.id = ${id} and sr.status = 'running' and m.id = sr.mix_id and m.user_id = ${userId}`;
 }
 
 export async function finishRun(
@@ -113,9 +119,21 @@ export async function finishRun(
   await sql`
     update save_runs sr set status = ${result.status}, error = ${result.error ?? null},
       phase = case when ${result.status} = 'succeeded' then 'done' else sr.phase end,
-      finished_at = now()
+      finished_at = now(), updated_at = now()
     from mixes m
-    where sr.id = ${id} and m.id = sr.mix_id and m.user_id = ${userId}`;
+    where sr.id = ${id} and sr.status = 'running' and m.id = sr.mix_id and m.user_id = ${userId}`;
+}
+
+/** Marks the Mix's running runs with no heartbeat for STALE_RUN_MINUTES as failed. */
+export async function failStaleRuns(sql: postgres.Sql, userId: string, mixId: string): Promise<void> {
+  if (!UUID.test(mixId)) return;
+  await sql`
+    update save_runs sr set status = 'failed', error = ${SAVE_FAILED},
+      finished_at = now(), updated_at = now()
+    from mixes m
+    where sr.mix_id = ${mixId} and sr.status = 'running'
+      and sr.updated_at < now() - make_interval(mins => ${STALE_RUN_MINUTES})
+      and m.id = sr.mix_id and m.user_id = ${userId}`;
 }
 
 export async function getRun(

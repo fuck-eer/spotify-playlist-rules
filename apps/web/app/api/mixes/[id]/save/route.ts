@@ -2,7 +2,7 @@ import { after, type NextRequest } from "next/server";
 import { requireRequestUser } from "@/lib/auth/require-user";
 import { getSql } from "@/lib/db/client";
 import { getMix } from "@/lib/db/mixes-repo";
-import { getRunningRun, startRun } from "@/lib/db/save-runs-repo";
+import { failStaleRuns, getRunningRun, startRun } from "@/lib/db/save-runs-repo";
 import { HttpError, jsonError } from "@/lib/http";
 import { performSave } from "@/lib/save";
 import { spotifyForUser } from "@/lib/spotify-for-user";
@@ -19,6 +19,7 @@ export async function POST(
     if (!(await getMix(sql, user.id, id))) {
       throw new HttpError(404, "not_found", "That mix doesn't exist.");
     }
+    await failStaleRuns(sql, user.id, id);
     const running = await getRunningRun(sql, user.id, id);
     if (running) {
       return Response.json(

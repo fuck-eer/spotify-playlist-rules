@@ -1,7 +1,14 @@
 import type postgres from "postgres";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createMix } from "./mixes-repo";
-import { finishRun, getRun, getRunningRun, startRun, updateRun } from "./save-runs-repo";
+import {
+  failStaleRuns,
+  finishRun,
+  getRun,
+  getRunningRun,
+  startRun,
+  updateRun,
+} from "./save-runs-repo";
 import { canReachTestDb, insertTestUser, resetTestDb } from "./test-utils";
 
 const reachable = await canReachTestDb();
@@ -87,6 +94,30 @@ describe.skipIf(!reachable)("save runs repo", () => {
       done: 0,
       error: null,
     });
+  });
+
+  it("fails runs with no progress for over 5 minutes, and leaves recent ones alone", async () => {
+    const stale = (await startRun(sql, user, mixId))!;
+    await sql`update save_runs set updated_at = now() - interval '6 minutes' where id = ${stale.id}`;
+    await failStaleRuns(sql, user, mixId);
+    expect(await getRun(sql, user, mixId, stale.id)).toMatchObject({
+      status: "failed",
+      error: "Couldn't create the playlist. Check your connection and retry.",
+    });
+    expect((await getRun(sql, user, mixId, stale.id))?.finishedAt).not.toBeNull();
+
+    const fresh = (await startRun(sql, user, mixId))!;
+    await sql`update save_runs set updated_at = now() - interval '1 minute' where id = ${fresh.id}`;
+    await failStaleRuns(sql, user, mixId);
+    expect((await getRun(sql, user, mixId, fresh.id))?.status).toBe("running");
+  });
+
+  it("updateRun bumps the heartbeat", async () => {
+    const run = (await startRun(sql, user, mixId))!;
+    await sql`update save_runs set updated_at = now() - interval '6 minutes' where id = ${run.id}`;
+    await updateRun(sql, user, run.id, { done: 1 });
+    await failStaleRuns(sql, user, mixId);
+    expect((await getRun(sql, user, mixId, run.id))?.status).toBe("running");
   });
 
   it("getRun is scoped to the mix owner and the mix", async () => {

@@ -1,6 +1,6 @@
 # 13: Fail stale save runs (heartbeat)
 
-**Status:** ready-for-agent
+**Status:** done
 **Type:** bug
 **Refs:** review P1; spec A5, story 46; ticket 12 known limit
 
@@ -18,5 +18,9 @@ A run left `running` by a crash or function timeout blocks every later save for 
 - route: with a backdated running run, POST returns 202 (new run); GET of the stale run returns `failed`.
 
 ## Acceptance criteria
-- [ ] A stale run never blocks saving for more than 5 minutes after its last progress
-- [ ] All tests pass
+- [x] A stale run never blocks saving for more than 5 minutes after its last progress
+- [x] All tests pass
+
+## Notes (implementation)
+- `updateRun` and `finishRun` now only touch runs that are still `running`, so a zombie save that resumes after being marked stale can't flip it back to succeeded.
+- `SAVE_FAILED` moved to `save-runs-repo.ts` (re-exported from `lib/save.ts`).
