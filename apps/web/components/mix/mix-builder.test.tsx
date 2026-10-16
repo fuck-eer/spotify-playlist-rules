@@ -74,7 +74,9 @@ describe("MixBuilder", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: /Liked Songs/ }));
-    await waitFor(() => expect(replace).toHaveBeenCalledWith("/mixes/m1"));
+    // URL updates in place (no server navigation that a reload could interrupt).
+    await waitFor(() => expect(window.location.pathname).toBe("/mixes/m1"));
+    expect(replace).not.toHaveBeenCalled();
     const post = fetchMock.mock.calls.find(([u, i]) => u === "/api/mixes" && i?.method === "POST")!;
     expect(JSON.parse(post[1]!.body as string)).toEqual({
       name: "Gym",

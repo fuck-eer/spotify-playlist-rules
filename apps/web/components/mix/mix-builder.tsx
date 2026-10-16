@@ -129,7 +129,11 @@ export function MixBuilder({
       const { mix: created } = (await res.json()) as { mix: { id: string } };
       setMixId(created.id);
       setSavedName(n);
-      router.replace(`/mixes/${created.id}`);
+      // Point the URL at the new mix without a server navigation: a slow or
+      // interrupted router.replace left the URL on /mixes/new, so a reload in
+      // that window (Next dev's full reload after compiling /mixes/[id]) wiped
+      // the form and orphaned the mix. Next syncs native history with its router.
+      window.history.replaceState(null, "", `/mixes/${created.id}`);
     } finally {
       setBusy(false);
     }
