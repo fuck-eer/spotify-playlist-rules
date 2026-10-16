@@ -29,6 +29,15 @@ import type { SourceListItem } from "@/lib/sources-types";
 import { CoverTile } from "./cover-tile";
 import { targetName } from "@rulemix/spotify/names";
 import { Progress } from "@/components/ui/progress";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Loader2Icon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import type { SaveRunRow } from "@/lib/db/save-runs-repo";
 import type { PreviewResponse } from "@/lib/preview";
@@ -38,6 +47,9 @@ import { RulePickerSheet, type RulesState } from "./rule-picker-sheet";
 import { RulesIconLink } from "./rules-icon-link";
 import { SongPickerSheet, type SongsState } from "./song-picker-sheet";
 import { SourcePickerSheet, type SourcesState } from "./source-picker-sheet";
+
+const spotifyUrl = (playlistId: string): string =>
+  `https://open.spotify.com/playlist/${encodeURIComponent(playlistId)}`;
 
 const SAVE_FAILED_COPY = "Couldn't create the playlist. Check your connection and retry.";
 
@@ -73,6 +85,10 @@ export function MixBuilder({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [nameInvalid, setNameInvalid] = useState(false);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const [targetId, setTargetId] = useState<string | null>(mix?.targetPlaylistId ?? null);
+  const [savedDialog, setSavedDialog] = useState(false);
   const [rules, setRules] = useState<MixRuleRow[]>(initialRules);
   const [rulePickerOpen, setRulePickerOpen] = useState(false);
   const [library, setLibrary] = useState<RulesState>({ status: "idle", rules: [] });
@@ -109,6 +125,11 @@ export function MixBuilder({
   }
 
   function openPicker(): void {
+    if (!mixId && !name.trim()) {
+      setNameInvalid(true);
+      nameRef.current?.focus();
+      return;
+    }
     setPickerOpen(true);
     if (sources.status !== "ready") void loadSources();
   }
@@ -127,6 +148,15 @@ export function MixBuilder({
         return;
       }
       const { mix: created } = (await res.json()) as { mix: { id: string } };
+      if (keepSourceOrder) {
+        // Chosen before the mix existed; the create API takes name + source only.
+        const ok = await fetch(`/api/mixes/${created.id}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ keepSourceOrder: true }),
+        });
+        if (!ok.ok) toast.error(await errorMessage(ok));
+      }
       setMixId(created.id);
       setSavedName(n);
       // Point the URL at the new mix without a server navigation: a slow or
@@ -314,6 +344,7 @@ export function MixBuilder({
   async function onKeepSourceOrder(next: boolean): Promise<void> {
     const prev = keepSourceOrder;
     setKeepSourceOrder(next);
+    if (!mixId) return; // applied when the mix is created
     if (!(await patch({ keepSourceOrder: next }))) {
       setKeepSourceOrder(prev);
       return;
@@ -384,6 +415,7 @@ export function MixBuilder({
               run.recreated ? `${base} It was recreated because the old one was gone.` : base,
             );
             router.refresh();
+            void showSaved();
           } else {
             saveFailed(run.error ?? SAVE_FAILED_COPY);
           }
@@ -398,6 +430,21 @@ export function MixBuilder({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- one poller per run; savedName/router changes must not restart it
   }, [mixId, saveRunId]);
+
+  async function showSaved(): Promise<void> {
+    if (!mixId) return;
+    try {
+      const res = await fetch(`/api/mixes/${mixId}`);
+      if (!res.ok) return;
+      const { mix: fresh } = (await res.json()) as { mix: MixRow };
+      if (fresh.targetPlaylistId) {
+        setTargetId(fresh.targetPlaylistId);
+        setSavedDialog(true);
+      }
+    } catch {
+      // The toast already confirmed the save; the dialog is a shortcut only.
+    }
+  }
 
   const saving = startingSave || saveRunId !== null;
   const unavailable = new Set(
@@ -474,14 +521,44 @@ export function MixBuilder({
       </div>
       <div className="flex-1 overflow-y-auto px-4 pb-32">
         <input
+          ref={nameRef}
           aria-label="Mix name"
-          className="w-full border-0 border-b border-line bg-transparent py-1 text-base font-bold text-tx outline-none"
+          aria-invalid={nameInvalid}
+          aria-describedby="mix-name-hint"
+          className={`w-full border-0 border-b bg-transparent py-1 text-base font-bold text-tx outline-none ${
+            nameInvalid ? "border-[#e8b04b]" : "border-line"
+          }`}
           placeholder="Name this mix"
           maxLength={80}
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            setName(e.target.value);
+            if (e.target.value.trim()) setNameInvalid(false);
+          }}
           onBlur={() => void onNameBlur()}
         />
+        {name.trim() ? (
+          <p id="mix-name-hint" className="mt-1.5 font-mono text-xs text-dim">
+            {targetName(name.trim())}
+          </p>
+        ) : (
+          <p
+            id="mix-name-hint"
+            className={`mt-1.5 text-xs ${nameInvalid ? "font-semibold text-[#e8b04b]" : "text-dim"}`}
+          >
+            Name your mix to pick a source
+          </p>
+        )}
+        {targetId ? (
+          <a
+            href={spotifyUrl(targetId)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-flex items-center rounded-full bg-s2 px-4 py-2 text-sm font-semibold text-tx"
+          >
+            Open in Spotify
+          </a>
+        ) : null}
         <div className="mb-2 mt-5 font-mono text-[11px] font-semibold tracking-[.12em] text-mut">
           SOURCE
         </div>
@@ -492,6 +569,11 @@ export function MixBuilder({
           className="flex w-full items-center gap-3 rounded-lg bg-s1 p-2.5 text-left"
         >
           <CoverTile seed={source?.id ?? (source ? "liked" : "none")} />
+          {busy ? (
+            <span role="status" aria-label="Creating mix" className="text-mut">
+              <Loader2Icon className="size-4 animate-spin" />
+            </span>
+          ) : null}
           <span className="flex-1 font-semibold">
             {source
               ? trackCount === null
@@ -556,7 +638,7 @@ export function MixBuilder({
           )
         ) : null}
         <p className="mt-1.5 text-xs text-dim">Drag to reorder. The top rule wins a conflict.</p>
-        {mixId ? (
+        {mixId || name.trim() ? (
           <>
             <div className="mb-2 mt-5 font-mono text-[11px] font-semibold tracking-[.12em] text-mut">
               OPTIONS
@@ -569,7 +651,7 @@ export function MixBuilder({
                 <p className="mt-1.5 text-xs text-dim">
                   Off reshuffles the base list once before rules run.
                 </p>
-                {keepSourceOrder ? null : (
+                {keepSourceOrder || !mixId ? null : (
                   <button
                     type="button"
                     onClick={() => void onReshuffle()}
@@ -617,6 +699,38 @@ export function MixBuilder({
           </p>
         </div>
       ) : null}
+      <Dialog open={savedDialog} onOpenChange={setSavedDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Saved to Spotify</DialogTitle>
+            <DialogDescription>
+              {targetName(savedName)} is ready. Play it with shuffle off.
+            </DialogDescription>
+          </DialogHeader>
+          {targetId ? (
+            <>
+              <a
+                href={spotifyUrl(targetId)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="break-all font-mono text-sm text-tx underline"
+              >
+                {spotifyUrl(targetId).replace("https://", "")}
+              </a>
+              <DialogFooter>
+                <a
+                  href={spotifyUrl(targetId)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full bg-[#1DB954] px-5 py-3 text-center text-[15px] font-bold text-black"
+                >
+                  Open in Spotify
+                </a>
+              </DialogFooter>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
       <SourcePickerSheet
         open={pickerOpen}
         onOpenChange={setPickerOpen}

@@ -149,3 +149,36 @@ describe("MixBuilder Save to Spotify", () => {
     expect(posts()).toBe(2);
   });
 });
+
+describe("MixBuilder saved dialog and Open in Spotify", () => {
+  it("after a successful save shows a dialog linking to the target playlist", async () => {
+    runs = [run({ status: "succeeded", phase: "writing", done: 3, total: 3 })];
+    const base = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation((url, init) =>
+      url === "/api/mixes/m1" && !init?.method
+        ? Promise.resolve(Response.json({ mix: { ...MIX, targetPlaylistId: "tgt9" } }))
+        : base(url, init),
+    );
+    render(<MixBuilder mix={MIX} />);
+    expect(screen.queryByRole("link", { name: "Open in Spotify" })).toBeNull();
+    await clickSave();
+    await tick(1000);
+    await tick(0);
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.textContent).toContain("open.spotify.com/playlist/tgt9");
+    const links = screen.getAllByRole("link", { name: /Open in Spotify|open\.spotify\.com/ });
+    expect(links.length).toBeGreaterThanOrEqual(2);
+    for (const a of links) {
+      expect(a.getAttribute("href")).toBe("https://open.spotify.com/playlist/tgt9");
+      expect(a.getAttribute("target")).toBe("_blank");
+      expect(a.getAttribute("rel")).toContain("noopener");
+    }
+  });
+
+  it("shows a persistent Open in Spotify link when the mix has a target", () => {
+    render(<MixBuilder mix={{ ...MIX, targetPlaylistId: "tgt1" }} />);
+    const a = screen.getByRole("link", { name: "Open in Spotify" });
+    expect(a.getAttribute("href")).toBe("https://open.spotify.com/playlist/tgt1");
+    expect(a.getAttribute("target")).toBe("_blank");
+  });
+});

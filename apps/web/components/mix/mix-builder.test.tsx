@@ -84,3 +84,45 @@ describe("MixBuilder", () => {
     });
   });
 });
+
+describe("MixBuilder new-mix name first", () => {
+  it("hints to name the mix and highlights the field when picking a source without a name", () => {
+    render(<MixBuilder mix={null} />);
+    expect(screen.getByText("Name your mix to pick a source")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Pick a source" }));
+    const input = screen.getByRole("textbox", { name: "Mix name" });
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    expect(document.activeElement).toBe(input);
+    expect(fetchMock).not.toHaveBeenCalledWith("/api/sources");
+  });
+
+  it("once named, shows the target name and order options straight away", () => {
+    render(<MixBuilder mix={null} />);
+    expect(screen.queryByText("Keep base order")).toBeNull();
+    fireEvent.change(screen.getByRole("textbox", { name: "Mix name" }), {
+      target: { value: "Gym" },
+    });
+    expect(screen.queryByText("Name your mix to pick a source")).toBeNull();
+    expect(screen.getByText("Rules: Gym")).toBeTruthy();
+    expect(screen.getByText("Keep base order")).toBeTruthy();
+  });
+
+  it("shows a spinner while the mix is being created", async () => {
+    let resolve: (r: Response) => void = () => {};
+    const base = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation((url, init) =>
+      url === "/api/mixes" && init?.method === "POST"
+        ? new Promise<Response>((r) => (resolve = r))
+        : base(url, init),
+    );
+    render(<MixBuilder mix={null} />);
+    fireEvent.change(screen.getByRole("textbox", { name: "Mix name" }), {
+      target: { value: "Gym" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Pick a source" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Liked Songs/ }));
+    expect(await screen.findByRole("status", { name: "Creating mix" })).toBeTruthy();
+    resolve(Response.json({ mix: { id: "m1" } }, { status: 201 }));
+    await waitFor(() => expect(screen.queryByRole("status", { name: "Creating mix" })).toBeNull());
+  });
+});
