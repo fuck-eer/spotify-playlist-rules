@@ -1,6 +1,6 @@
 # ADR-0034: Android authentication against the rulemix backend
 
-Status: **Proposed, needs Nishchay's approval.** Nothing in the Android tickets that depends on it may start before he approves.
+Status: **Accepted** (approved by Nishchay, 2026-10-17).
 
 ## Context
 
