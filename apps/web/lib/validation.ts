@@ -35,3 +35,10 @@ export function mergedRuleIsValid(
     n: patch.n !== undefined ? patch.n : current.n,
   });
 }
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Row ids are uuids; anything else is treated as "not found" without hitting Postgres. */
+export function isUuid(v: string): boolean {
+  return UUID_RE.test(v);
+}

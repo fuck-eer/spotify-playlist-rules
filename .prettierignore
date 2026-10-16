@@ -1,3 +1,14 @@
+# vendor (shadcn/ui copies) and throwaway spikes keep their own formatting
+apps/web/components/ui/
+spikes/
+# build and tool output
+node_modules/
+.next/
+.turbo/
+dist/
+coverage/
+playwright-report/
+test-results/
 pnpm-lock.yaml
 docs
 .scratch

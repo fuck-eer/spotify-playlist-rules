@@ -11,7 +11,8 @@
     "test": "turbo test",
     "test:e2e": "turbo test:e2e",
     "format": "prettier -w .",
-    "db:migrate": "tsx scripts/migrate.ts"
+    "db:migrate": "tsx scripts/migrate.ts",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
     "@types/node": "^20",

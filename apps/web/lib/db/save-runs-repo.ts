@@ -1,4 +1,5 @@
 import type postgres from "postgres";
+import { isUuid } from "../validation";
 
 export interface SaveRunRow {
   id: string;
@@ -39,7 +40,6 @@ export const SAVE_FAILED = "Couldn't create the playlist. Check your connection 
 /** A running save with no progress for this long is treated as dead (crash or timeout). */
 export const STALE_RUN_MINUTES = 5;
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const COLS =
   "sr.id, sr.mix_id, sr.status, sr.phase, sr.done, sr.total, sr.tracks_written, sr.recreated, sr.retries_429, sr.error, sr.started_at, sr.finished_at";
 
@@ -74,7 +74,7 @@ export async function startRun(
   userId: string,
   mixId: string,
 ): Promise<StartRunResult> {
-  if (!UUID.test(mixId)) return { ok: false, reason: "not_found" };
+  if (!isUuid(mixId)) return { ok: false, reason: "not_found" };
   try {
     const [r] = await sql<DbRow[]>`
       insert into save_runs as sr (mix_id)
@@ -94,7 +94,7 @@ export async function getRunningRun(
   userId: string,
   mixId: string,
 ): Promise<SaveRunRow | null> {
-  if (!UUID.test(mixId)) return null;
+  if (!isUuid(mixId)) return null;
   const [r] = await sql<DbRow[]>`
     select ${sql.unsafe(COLS)} from save_runs sr
     join mixes m on m.id = sr.mix_id and m.user_id = ${userId}
@@ -141,7 +141,7 @@ export async function finishRun(
 
 /** Marks the Mix's running runs with no heartbeat for STALE_RUN_MINUTES as failed. */
 export async function failStaleRuns(sql: postgres.Sql, userId: string, mixId: string): Promise<void> {
-  if (!UUID.test(mixId)) return;
+  if (!isUuid(mixId)) return;
   await sql`
     update save_runs sr set status = 'failed', error = ${SAVE_FAILED},
       finished_at = now(), updated_at = now()
@@ -157,7 +157,7 @@ export async function getRun(
   mixId: string,
   runId: string,
 ): Promise<SaveRunRow | null> {
-  if (!UUID.test(mixId) || !UUID.test(runId)) return null;
+  if (!isUuid(mixId) || !isUuid(runId)) return null;
   const [r] = await sql<DbRow[]>`
     select ${sql.unsafe(COLS)} from save_runs sr
     join mixes m on m.id = sr.mix_id and m.user_id = ${userId}

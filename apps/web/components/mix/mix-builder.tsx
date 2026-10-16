@@ -305,7 +305,6 @@ export function MixBuilder({
     }
     const t = setTimeout(() => void loadPreview(mixId), 300);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mixId, previewTick]);
 
   async function onKeepSourceOrder(next: boolean): Promise<void> {
@@ -393,7 +392,7 @@ export function MixBuilder({
       stopped = true;
       clearInterval(timer);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one poller per run; savedName/router changes must not restart it
   }, [mixId, saveRunId]);
 
   const saving = startingSave || saveRunId !== null;
@@ -408,8 +407,7 @@ export function MixBuilder({
     handledAddRule.current = true;
     openSongPicker(addRuleId);
     router.replace(`/mixes/${mixId}`);
-    // Runs once for the ?addRule handoff from the rule editor.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once for the ?addRule handoff from the rule editor
   }, [addRuleId, mixId]);
 
   async function onNameBlur(): Promise<void> {

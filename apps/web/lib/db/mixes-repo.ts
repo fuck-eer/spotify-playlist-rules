@@ -1,4 +1,5 @@
 import type postgres from "postgres";
+import { isUuid } from "../validation";
 
 export interface MixSource {
   type: "playlist" | "liked";
@@ -44,7 +45,6 @@ interface DbRow {
   updated_at: Date;
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function toRow(r: DbRow): MixRow {
   return {
@@ -80,7 +80,7 @@ export async function getMix(
   userId: string,
   id: string,
 ): Promise<MixRow | null> {
-  if (!UUID.test(id)) return null;
+  if (!isUuid(id)) return null;
   const [r] = await select(sql, userId, id);
   return r ? toRow(r) : null;
 }
@@ -109,7 +109,7 @@ export async function updateMix(
   id: string,
   patch: MixPatch,
 ): Promise<MixRow | null> {
-  if (!UUID.test(id)) return null;
+  if (!isUuid(id)) return null;
   return sql.begin(async (tx) => {
     const [cur] = await tx<{ source_type: string; source_playlist_id: string | null }[]>`
       select source_type, source_playlist_id from mixes
@@ -139,7 +139,7 @@ export async function updateMix(
 }
 
 export async function deleteMix(sql: postgres.Sql, userId: string, id: string): Promise<boolean> {
-  if (!UUID.test(id)) return false;
+  if (!isUuid(id)) return false;
   const res = await sql`delete from mixes where id = ${id} and user_id = ${userId}`;
   return res.count > 0;
 }

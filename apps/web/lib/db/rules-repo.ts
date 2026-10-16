@@ -1,5 +1,6 @@
 import type { RuleKind } from "@rulemix/rules-engine";
 import type postgres from "postgres";
+import { isUuid } from "../validation";
 
 export interface RuleRow {
   id: string;
@@ -30,7 +31,6 @@ interface DbRow {
   updated_at: Date;
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function toRow(r: DbRow): RuleRow {
   return {
@@ -63,7 +63,7 @@ export async function getRule(
   userId: string,
   id: string,
 ): Promise<RuleRow | null> {
-  if (!UUID_RE.test(id)) return null;
+  if (!isUuid(id)) return null;
   const [r] = await select(sql, userId, id);
   return r ? toRow(r) : null;
 }
@@ -86,7 +86,7 @@ export async function updateRule(
   id: string,
   patch: RulePatch,
 ): Promise<RuleRow | null> {
-  if (!UUID_RE.test(id)) return null;
+  if (!isUuid(id)) return null;
   const k = patch.kind ?? null;
   const setN = patch.n !== undefined;
   const p = patch.pinned ?? null;

@@ -1,5 +1,6 @@
 import type { RuleKind } from "@rulemix/rules-engine";
 import type postgres from "postgres";
+import { isUuid } from "../validation";
 
 export interface MixRuleRow {
   id: string;
@@ -13,7 +14,6 @@ export interface MixRuleRow {
 }
 
 type Tx = postgres.Sql | postgres.TransactionSql;
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 interface DbRow {
   id: string;
@@ -63,7 +63,7 @@ export async function listMixRules(
   userId: string,
   mixId: string,
 ): Promise<MixRuleRow[]> {
-  if (!UUID.test(mixId)) return [];
+  if (!isUuid(mixId)) return [];
   return (await select(sql, userId, mixId)).map(toRow);
 }
 
@@ -76,7 +76,7 @@ export async function addMixRule(
 ): Promise<
   { ok: true; row: MixRuleRow } | { ok: false; code: "limit" | "not_found" | "archived" }
 > {
-  if (!UUID.test(mixId) || !UUID.test(input.ruleId)) return { ok: false, code: "not_found" };
+  if (!isUuid(mixId) || !isUuid(input.ruleId)) return { ok: false, code: "not_found" };
   return sql.begin(async (tx) => {
     if (!(await lockMix(tx, userId, mixId)))
       return { ok: false as const, code: "not_found" as const };
@@ -103,7 +103,7 @@ export async function reorderMixRules(
   mixId: string,
   orderedIds: string[],
 ): Promise<boolean> {
-  if (!UUID.test(mixId)) return false;
+  if (!isUuid(mixId)) return false;
   return sql.begin(async (tx) => {
     if (!(await lockMix(tx, userId, mixId))) return false;
     const current = (
@@ -130,7 +130,7 @@ export async function removeMixRule(
   mixId: string,
   mixRuleId: string,
 ): Promise<boolean> {
-  if (!UUID.test(mixId) || !UUID.test(mixRuleId)) return false;
+  if (!isUuid(mixId) || !isUuid(mixRuleId)) return false;
   return sql.begin(async (tx) => {
     if (!(await lockMix(tx, userId, mixId))) return false;
     const res = await tx`delete from mix_rules where id = ${mixRuleId} and mix_id = ${mixId}`;
