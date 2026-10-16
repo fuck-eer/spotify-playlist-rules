@@ -4,7 +4,7 @@
 
 **Blocked by:** 04
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Glossary:** Rule, Rule Set, Pin first, Insert every N, Repeat N times. **Design:** interaction-spec §3; shot `mobile-popover.png`.
 

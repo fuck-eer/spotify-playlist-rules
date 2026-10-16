@@ -41,6 +41,8 @@ import { Loader2Icon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import type { PlaybackOutcome, RunKind, SaveRunRow } from "@/lib/db/save-runs-repo";
 import { GraphPanel } from "@/components/graph/graph-panel";
+import { SongPopover, UnavailableCard } from "@/components/graph/song-popover";
+import type { GraphNode, RuleKind } from "@rulemix/rules-engine";
 import { useMixState } from "@/lib/use-mix-state";
 import { RuleCard } from "./rule-card";
 import { RulePickerSheet, type RulesState } from "./rule-picker-sheet";
@@ -318,6 +320,58 @@ export function MixBuilder({
   }
 
   const graph = useMixState(mixId, previewTick);
+  const [tapped, setTapped] = useState<{ node: GraphNode; el: HTMLElement } | null>(null);
+  const [unavailableOpen, setUnavailableOpen] = useState(false);
+
+  /** Library rule for kind/n (created if missing), then bound to the song in this Mix. */
+  async function addRuleForSong(kind: RuleKind, n: number | null, uri: string): Promise<boolean> {
+    if (!mixId) return false;
+    let lib = library.status === "ready" ? library.rules : null;
+    if (!lib) {
+      const res = await fetch("/api/rules");
+      lib = res.ok ? ((await res.json()) as { rules: RuleRow[] }).rules : [];
+    }
+    let ruleId = lib.find((r) => r.kind === kind && r.n === n && r.archivedAt === null)?.id;
+    if (!ruleId) {
+      const res = await fetch("/api/rules", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ kind, n }),
+      });
+      if (!res.ok) {
+        toast.error(await errorMessage(res));
+        return false;
+      }
+      ruleId = ((await res.json()) as { rule: RuleRow }).rule.id;
+      setLibrary({ status: "idle", rules: [] });
+    }
+    const res = await fetch(`/api/mixes/${mixId}/rules`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ruleId, trackUri: uri }),
+    });
+    if (!res.ok) {
+      toast.error(await errorMessage(res));
+      return false;
+    }
+    const { rule } = (await res.json()) as { rule: MixRuleRow };
+    const name = graph.state?.tracks[uri]?.name ?? null;
+    setRules((rs) => [...rs, { ...rule, songName: rule.songName ?? name }]);
+    refreshPreview();
+    return true;
+  }
+
+  async function changeRule(
+    mixRuleId: string,
+    kind: RuleKind,
+    n: number,
+    uri: string,
+  ): Promise<void> {
+    const r = rules.find((x) => x.id === mixRuleId);
+    if (!r) return;
+    await onRemove(r);
+    await addRuleForSong(kind, n, uri);
+  }
 
   async function onKeepSourceOrder(next: boolean): Promise<void> {
     const prev = keepSourceOrder;
@@ -594,7 +648,41 @@ export function MixBuilder({
               error={graph.error}
               state={graph.state}
               result={graph.result}
+              onTap={(node, el) => setTapped({ node, el })}
+              onSkipped={() => setUnavailableOpen(true)}
             />
+            {tapped && graph.state ? (
+              <SongPopover
+                uri={tapped.node.uri}
+                track={graph.state.tracks[tapped.node.uri]}
+                anchor={tapped.el}
+                shiftedFrom={tapped.node.shiftedFrom}
+                songRules={rules
+                  .map((r, index) => ({
+                    mixRuleId: r.id,
+                    index,
+                    kind: r.kind,
+                    n: r.n,
+                    uri: r.trackUri,
+                  }))
+                  .filter((r) => r.uri === tapped.node.uri)}
+                ruleCount={rules.length}
+                maxRules={maxRules}
+                onAdd={(kind, n) => void addRuleForSong(kind, n, tapped.node.uri)}
+                onRemove={(id) => {
+                  const r = rules.find((x) => x.id === id);
+                  if (r) void onRemove(r);
+                }}
+                onChange={(id, kind, n) => void changeRule(id, kind, n, tapped.node.uri)}
+                onClose={() => setTapped(null)}
+              />
+            ) : null}
+            {unavailableOpen && graph.result ? (
+              <UnavailableCard
+                count={graph.result.stats.skippedUnavailable}
+                onClose={() => setUnavailableOpen(false)}
+              />
+            ) : null}
           </>
         ) : null}
         <div className="mb-2 mt-5 font-mono text-[11px] font-semibold tracking-[.12em] text-mut">
