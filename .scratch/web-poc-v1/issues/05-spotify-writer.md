@@ -23,7 +23,7 @@ export function writeTarget(c: SpotifyClient, input: WriteTargetInput): Promise<
 ```
 
 ## Behaviour (exact)
-1. **Check whether the target exists:** if `targetPlaylistId` is set, call `GET /playlists/{id}/followers/contains`. It is missing if the response is 404 or 403, or if the body is `[false]` (the user unfollowed or deleted it).
+1. **Check whether the target exists:** if `targetPlaylistId` is set, call `GET /me/library/contains?uris=spotify:playlist:{id}` (the `uris` value URL-encoded; one URI only). It is missing if the response is 404 or 403, or if the body is `[false]` (the user unfollowed or deleted it). Do not call `GET /playlists/{id}/followers/contains`: Spotify removed it in Feb 2026 (see Endpoint check below).
 2. **Create the playlist** if `targetPlaylistId` is null or the target is missing: `POST /me/playlists` with `{ name: defaultName, public: false, description: "Made by rulemix. Play with shuffle off." }`.
    - Set `created = true`.
    - Set `recreated = true` only if a `targetPlaylistId` had been given (ADR-0016).
@@ -35,6 +35,7 @@ export function writeTarget(c: SpotifyClient, input: WriteTargetInput): Promise<
 ## Tests (write first)
 - No target id: it creates the playlist (check the request body), PUTs 3 uris, and returns `created=true, recreated=false`.
 - An existing target that is followed: no create call, and the PUT goes to the existing id.
+- The existence check hits `GET /me/library/contains` with query `uris=spotify:playlist:<id>`.
 - A target that returns 404, 403 or `[false]` is recreated, giving `recreated=true` and a new id.
 - Chunking checks the exact call sequence and chunk sizes:
   - 0 → PUT []
@@ -48,3 +49,9 @@ export function writeTarget(c: SpotifyClient, input: WriteTargetInput): Promise<
 
 ## Acceptance criteria
 - [ ] Exported exactly as above; all tests pass offline
+
+## Endpoint check (verified 2026-10-16 against developer.spotify.com, during ticket 04)
+- `GET /playlists/{id}/followers/contains`: **REMOVED** in the February 2026 Web API changes; replacement is `GET /me/library/contains?uris=...` (accepts `spotify:playlist:{id}`, max 40 URIs, returns an array of booleans; scopes `user-library-read` / `playlist-read-private`, both already in `SCOPES`). Step 1 above updated accordingly.
+- `POST /me/playlists`: current (replaces removed `POST /users/{id}/playlists`). OK as written.
+- `PUT /playlists/{id}/items` (replace) and `POST /playlists/{id}/items` (add): current (replace removed `/tracks` variants). OK as written.
+- Not live-verified: whether a deleted (not just unfollowed) playlist returns `[false]` or an error from `/me/library/contains`; the 404/403/`[false]` → missing rule covers all three.

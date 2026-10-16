@@ -1,0 +1,19 @@
+{
+  "name": "Empty source, no rules",
+  "input": {
+    "source": [],
+    "rules": [],
+    "keepSourceOrder": true,
+    "seed": 0
+  },
+  "expected": {
+    "uris": [],
+    "preview": [],
+    "issues": [],
+    "stats": {
+      "total": 0,
+      "rulesApplied": 0,
+      "skippedUnavailable": 0
+    }
+  }
+}

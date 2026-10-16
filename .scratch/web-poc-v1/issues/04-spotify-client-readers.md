@@ -1,6 +1,6 @@
 # 04: Spotify package: HTTP client, auth helpers, readers
 
-**Status:** ready-for-agent
+**Status:** done
 **Type:** task
 **Blocked by:** 01
 **Glossary terms:** Source playlist, Unavailable track
@@ -88,6 +88,11 @@ export function getSourceTrackCount(c: SpotifyClient, source: { type: "playlist"
   - `getSourceTrackCount` works for both source types.
 
 ## Acceptance criteria
-- [ ] The interface above is exported exactly from `@rulemix/spotify`
-- [ ] All tests pass offline; no real network
-- [ ] No tokens are logged anywhere
+- [x] The interface above is exported exactly from `@rulemix/spotify`
+- [x] All tests pass offline; no real network
+- [x] No tokens are logged anywhere
+
+## Implementation notes
+- Endpoints verified 2026-10-16 against developer.spotify.com: `GET /me`, `GET /me/playlists`, `GET /me/tracks`, `GET /playlists/{id}`, `GET /playlists/{id}/items` (limit max 50, `item` with deprecated `track` fallback) are all current after the Feb 2026 changes.
+- `listSources` also calls `GET /me` to get the display name for the Liked Songs `ownerName` (the signature only passes `meId`).
+- `fake.on`: the most recently registered matching route wins; unmatched requests get 404. `fake.calls` entries expose `method, path, query (URLSearchParams), headers, rawBody, json`.
