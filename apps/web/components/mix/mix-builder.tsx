@@ -27,6 +27,9 @@ import type { MixRow, MixSource } from "@/lib/db/mixes-repo";
 import type { RuleRow } from "@/lib/db/rules-repo";
 import type { SourceListItem } from "@/lib/sources-types";
 import { CoverTile } from "./cover-tile";
+import { Switch } from "@/components/ui/switch";
+import type { PreviewResponse } from "@/lib/preview";
+import { PreviewPanel, type PreviewState } from "./preview-panel";
 import { RuleCard } from "./rule-card";
 import { RulePickerSheet, type RulesState } from "./rule-picker-sheet";
 import { RulesIconLink } from "./rules-icon-link";
@@ -72,6 +75,11 @@ export function MixBuilder({
   const [songs, setSongs] = useState<SongsState>({ status: "idle", songs: [] });
   const [pendingSource, setPendingSource] = useState<SourceListItem | null>(null);
   const handledAddRule = useRef(false);
+  const [keepSourceOrder, setKeepSourceOrder] = useState(mix?.keepSourceOrder ?? false);
+  const [preview, setPreview] = useState<PreviewState>({ status: "idle", data: null });
+  const [previewTick, setPreviewTick] = useState(0);
+  const previewReq = useRef(0);
+  const refreshPreview = () => setPreviewTick((t) => t + 1);
   const [sources, setSources] = useState<SourcesState>({
     status: "idle",
     sources: [],
@@ -158,6 +166,7 @@ export function MixBuilder({
       setRules([]);
       setSongs({ status: "idle", songs: [] });
     }
+    refreshPreview();
   }
 
   async function loadLibrary(): Promise<void> {
@@ -207,6 +216,7 @@ export function MixBuilder({
     }
     const { rule } = (await res.json()) as { rule: MixRuleRow };
     setRules((rs) => [...rs, { ...rule, songName: rule.songName ?? t.name }]);
+    refreshPreview();
   }
 
   async function saveOrder(next: MixRuleRow[], prev: MixRuleRow[]): Promise<void> {
@@ -219,7 +229,9 @@ export function MixBuilder({
     if (!res.ok) {
       setRules(prev);
       toast.error(await errorMessage(res));
+      return;
     }
+    refreshPreview();
   }
 
   const dragStart = useRef<MixRuleRow[] | null>(null);
@@ -252,8 +264,65 @@ export function MixBuilder({
     if (!res.ok) {
       setRules(prev);
       toast.error(await errorMessage(res));
+      return;
+    }
+    refreshPreview();
+  }
+
+  async function loadPreview(id: string): Promise<void> {
+    const reqId = ++previewReq.current;
+    setPreview((p) => ({ ...p, status: "loading" }));
+    try {
+      const res = await fetch(`/api/mixes/${id}/preview`);
+      if (reqId !== previewReq.current) return;
+      if (!res.ok) {
+        setPreview({ status: "error", data: null, error: await errorMessage(res) });
+        return;
+      }
+      const data = (await res.json()) as PreviewResponse;
+      if (reqId === previewReq.current) setPreview({ status: "ready", data });
+    } catch {
+      if (reqId === previewReq.current) setPreview({ status: "error", data: null });
     }
   }
+
+  // First load is immediate; later changes are debounced by 300ms.
+  useEffect(() => {
+    if (!mixId) return;
+    if (previewTick === 0) {
+      void loadPreview(mixId);
+      return;
+    }
+    const t = setTimeout(() => void loadPreview(mixId), 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mixId, previewTick]);
+
+  async function onKeepSourceOrder(next: boolean): Promise<void> {
+    const prev = keepSourceOrder;
+    setKeepSourceOrder(next);
+    if (!(await patch({ keepSourceOrder: next }))) {
+      setKeepSourceOrder(prev);
+      return;
+    }
+    refreshPreview();
+  }
+
+  async function onReshuffle(): Promise<void> {
+    if (!mixId) return;
+    const res = await fetch(`/api/mixes/${mixId}/reshuffle`, { method: "POST" });
+    if (!res.ok) {
+      toast.error(await errorMessage(res));
+      return;
+    }
+    refreshPreview();
+  }
+
+  const unavailable = new Set(
+    (preview.data?.issues ?? [])
+      .filter((i) => i.kind === "unavailable_rule_song")
+      .map((i) => i.ruleIndex),
+  );
 
   useEffect(() => {
     if (!addRuleId || !mixId || handledAddRule.current) return;
@@ -364,6 +433,14 @@ export function MixBuilder({
         <p className="mt-1.5 text-xs text-dim">
           Discover Weekly and other Spotify-made lists need a copy in your library first.
         </p>
+        {mixId ? (
+          <>
+            <div className="mb-2 mt-5 font-mono text-[11px] font-semibold tracking-[.12em] text-mut">
+              PREVIEW
+            </div>
+            <PreviewPanel state={preview} onRegenerate={() => void loadPreview(mixId)} />
+          </>
+        ) : null}
         <div className="mb-2 mt-5 font-mono text-[11px] font-semibold tracking-[.12em] text-mut">
           RULES
         </div>
@@ -379,6 +456,7 @@ export function MixBuilder({
                 onRemove={(x) => void onRemove(x)}
                 onMove={onMove}
                 onDragEnd={onDragEnd}
+                unavailable={unavailable.has(i)}
               />
             ))}
           </Reorder.Group>
@@ -397,6 +475,37 @@ export function MixBuilder({
           )
         ) : null}
         <p className="mt-1.5 text-xs text-dim">Drag to reorder. The top rule wins a conflict.</p>
+        {mixId ? (
+          <>
+            <div className="mb-2 mt-5 font-mono text-[11px] font-semibold tracking-[.12em] text-mut">
+              OPTIONS
+            </div>
+            <div className="flex items-start gap-3 py-2.5">
+              <div className="flex-1">
+                <div id="keep-base-order" className="font-semibold">
+                  Keep base order
+                </div>
+                <p className="mt-1.5 text-xs text-dim">
+                  Off reshuffles the base list once before rules run.
+                </p>
+                {keepSourceOrder ? null : (
+                  <button
+                    type="button"
+                    onClick={() => void onReshuffle()}
+                    className="mt-1.5 text-sm font-semibold text-tx underline"
+                  >
+                    Reshuffle
+                  </button>
+                )}
+              </div>
+              <Switch
+                aria-labelledby="keep-base-order"
+                checked={keepSourceOrder}
+                onCheckedChange={(v) => void onKeepSourceOrder(v)}
+              />
+            </div>
+          </>
+        ) : null}
       </div>
       <SourcePickerSheet
         open={pickerOpen}

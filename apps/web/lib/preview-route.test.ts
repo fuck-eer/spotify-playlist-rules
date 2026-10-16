@@ -27,7 +27,12 @@ describe.skipIf(!reachable)("preview and reshuffle routes", () => {
     sql = await resetTestDb();
     cookie = await signInFakeUser(sql);
     mixId = (
-      await createMix(sql, FAKE_ME, { name: "Gym", source: { type: "playlist", id: "pl-own", name: "Gym bangers" } }, 7)
+      await createMix(
+        sql,
+        FAKE_ME,
+        { name: "Gym", source: { type: "playlist", id: "pl-own", name: "Gym bangers" } },
+        7,
+      )
     ).id;
     fake.calls.length = 0;
   });
@@ -50,12 +55,17 @@ describe.skipIf(!reachable)("preview and reshuffle routes", () => {
 
   it("GET preview is 404 for someone else's or unknown mix and 401 signed out", async () => {
     const missing = "00000000-0000-0000-0000-000000000000";
-    expect((await preview(req(`/api/mixes/${missing}/preview`, cookie), ctx(missing))).status).toBe(404);
+    expect((await preview(req(`/api/mixes/${missing}/preview`, cookie), ctx(missing))).status).toBe(
+      404,
+    );
     expect((await preview(req(`/api/mixes/${mixId}/preview`, null), ctx(mixId))).status).toBe(401);
   });
 
   it("reshuffle stores and returns a new seed", async () => {
-    const res = await reshuffle(req(`/api/mixes/${mixId}/reshuffle`, cookie, { method: "POST" }), ctx(mixId));
+    const res = await reshuffle(
+      req(`/api/mixes/${mixId}/reshuffle`, cookie, { method: "POST" }),
+      ctx(mixId),
+    );
     expect(res.status).toBe(200);
     const { seed } = (await res.json()) as { seed: number };
     expect(Number.isInteger(seed) && seed >= 0 && seed <= 4294967295).toBe(true);

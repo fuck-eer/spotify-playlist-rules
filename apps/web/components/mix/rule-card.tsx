@@ -12,12 +12,14 @@ export function RuleCard({
   onRemove,
   onMove,
   onDragEnd,
+  unavailable = false,
 }: {
   rule: MixRuleRow;
   index: number;
   onRemove: (r: MixRuleRow) => void;
   onMove: (r: MixRuleRow, delta: -1 | 1) => void;
   onDragEnd?: () => void;
+  unavailable?: boolean;
 }) {
   const controls = useDragControls();
   const label = `#${String(index + 1).padStart(2, "0")}`;
@@ -46,7 +48,17 @@ export function RuleCard({
         className="size-2 flex-none rounded-[2px]"
         style={{ background: ruleColor(index) }}
       />
-      <span className="flex-1 text-sm">{line}</span>
+      <span className="flex-1 text-sm">
+        {line}
+        {unavailable ? (
+          <span className="mt-0.5 flex items-center gap-1 text-xs text-[#f15e6c]">
+            <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path d="M10 2 1 18h18L10 2zm-1 6h2v5H9V8zm0 6h2v2H9v-2z" />
+            </svg>
+            Song unavailable. Pick another.
+          </span>
+        ) : null}
+      </span>
       <button
         type="button"
         aria-label={`Reorder ${label}`}

@@ -1,6 +1,6 @@
 # 11: Preview + Regenerate, base order option, Reshuffle
 
-**Status:** ready-for-agent
+**Status:** done
 **Type:** task
 **Blocked by:** 02, 10
 **Glossary terms:** Preview, Regenerate, Base list, Seed, Unavailable track, Rule Set
@@ -50,6 +50,13 @@ The Mix builder shows OPTIONS and a live PREVIEW computed by the rules engine fr
   - the warning text shows on the flagged card.
 
 ## Acceptance criteria
-- [ ] Regenerate never writes to Spotify
-- [ ] The Preview matches `build()` exactly (no separate UI logic)
-- [ ] All tests pass
+- [x] Regenerate never writes to Spotify
+- [x] The Preview matches `build()` exactly (no separate UI logic)
+- [x] All tests pass
+
+## Notes (implementation)
+- Builder section order follows the mockup: SOURCE, PREVIEW, RULES, OPTIONS. PREVIEW/OPTIONS show once the Mix exists.
+- Preview rendering lives in `components/mix/preview-panel.tsx` (pure render of `build()` output via `previewToDots`); state/debounce in `mix-builder.tsx`. First load immediate; later refreshes debounced 300ms; stale responses ignored. Regenerate fetches immediately.
+- New copy: preview error fallback "Couldn't build the preview. Try again.".
+- Preview route sends `cache-control: no-store`. 404 for unknown/foreign mixes.
+- Extra e2e `e2e/preview.spec.ts` (summary, Regenerate, Keep base order persists, Reshuffle hidden).

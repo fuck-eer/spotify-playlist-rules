@@ -13,7 +13,9 @@ import { signInFakeUser, startRouteHarness } from "./testing/route-harness";
 
 const reachable = await canReachTestDb();
 const T = (id: string) => `spotify:track:${id}`;
-const item = (id: string) => ({ item: { uri: T(id), name: id.toUpperCase(), type: "track", artists: [{ name: "A" }] } });
+const item = (id: string) => ({
+  item: { uri: T(id), name: id.toUpperCase(), type: "track", artists: [{ name: "A" }] },
+});
 
 describe.skipIf(!reachable)("computePreview", () => {
   let fake: FakeSpotify;
@@ -25,9 +27,16 @@ describe.skipIf(!reachable)("computePreview", () => {
   function serve(ids: (string | null)[]): void {
     const items = ids.map((id) => (id ? item(id) : { is_local: true, item: null }));
     fake.on("GET", /\/playlists\/pl-test$/, () => ({ body: { items: { total: items.length } } }));
-    fake.on("GET", /\/playlists\/pl-test\/items$/, () => ({ body: { total: items.length, next: null, items } }));
+    fake.on("GET", /\/playlists\/pl-test\/items$/, () => ({
+      body: { total: items.length, next: null, items },
+    }));
     fake.on("GET", /\/me\/playlists$/, () => ({
-      body: { next: null, items: [{ id: "pl-test", name: "Test", owner: { id: FAKE_ME }, items: { total: items.length } }] },
+      body: {
+        next: null,
+        items: [
+          { id: "pl-test", name: "Test", owner: { id: FAKE_ME }, items: { total: items.length } },
+        ],
+      },
     }));
   }
   async function addRule(kind: "pin_first" | "every_n" | "repeat", n: number | null, uri: string) {
@@ -43,7 +52,14 @@ describe.skipIf(!reachable)("computePreview", () => {
   beforeEach(async () => {
     sql = await resetTestDb();
     await signInFakeUser(sql);
-    mixId = (await createMix(sql, FAKE_ME, { name: "T", source: { type: "playlist", id: "pl-test", name: "Test" } }, 42)).id;
+    mixId = (
+      await createMix(
+        sql,
+        FAKE_ME,
+        { name: "T", source: { type: "playlist", id: "pl-test", name: "Test" } },
+        42,
+      )
+    ).id;
   });
   afterAll(async () => {
     await getSql().end();
@@ -83,7 +99,9 @@ describe.skipIf(!reachable)("computePreview", () => {
   it("keeps source order when asked, and is deterministic for one seed", async () => {
     serve(["a", "b", "c", "d", "e", "f"]);
     await updateMix(sql, FAKE_ME, mixId, { keepSourceOrder: true });
-    expect((await preview()).slots.map((s) => s.uri)).toEqual(["a", "b", "c", "d", "e", "f"].map(T));
+    expect((await preview()).slots.map((s) => s.uri)).toEqual(
+      ["a", "b", "c", "d", "e", "f"].map(T),
+    );
     await updateMix(sql, FAKE_ME, mixId, { keepSourceOrder: false });
     const one = (await preview()).slots;
     expect((await preview()).slots).toEqual(one);
