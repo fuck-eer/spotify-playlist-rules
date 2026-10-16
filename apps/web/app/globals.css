@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-@theme {
+@theme static {
   --color-bg: #121212;
   --color-s1: #181818;
   --color-s2: #242424;
@@ -11,6 +11,37 @@
   --color-dim: #7a7a7a;
   --color-g: #1db954;
   --color-err: #f15e6c;
+  --color-r1: #e8b04b;
+  --color-r2: #7aa7ff;
+  --color-r3: #e57a9a;
+  --color-r4: #9ad08a;
+  --color-r5: #c9a3f0;
+  --color-r6: #5fcfc4;
+  --color-r7: #f0895a;
+  --color-r8: #d8d36a;
+  --color-r9: #8f96f0;
+  --color-r10: #c8b08a;
+  --color-dot: #555555;
+  --color-draft: #ffffff;
+  /* shadcn semantic tokens, mapped onto the rulemix palette */
+  --color-background: #121212;
+  --color-foreground: #ffffff;
+  --color-card: #181818;
+  --color-card-foreground: #ffffff;
+  --color-popover: #242424;
+  --color-popover-foreground: #ffffff;
+  --color-primary: #1db954;
+  --color-primary-foreground: #000000;
+  --color-secondary: #2e2e2e;
+  --color-secondary-foreground: #ffffff;
+  --color-muted: #242424;
+  --color-muted-foreground: #b3b3b3;
+  --color-accent: #2e2e2e;
+  --color-accent-foreground: #ffffff;
+  --color-destructive: #f15e6c;
+  --color-border: #333333;
+  --color-input: #333333;
+  --color-ring: #1db954;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
