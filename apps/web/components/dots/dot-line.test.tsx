@@ -27,6 +27,27 @@ describe("DotLine", () => {
     expect(container.querySelector("title")?.textContent).toContain("moved from #4");
     expect(screen.getByText("#1")).toBeTruthy();
   });
+  it("draws a split dot with one segment per colour", () => {
+    const { container } = render(
+      <DotLine
+        items={[{ key: "a", color: "#e8b04b", colors: ["#e8b04b", "#e86ba8"] }]}
+        ariaLabel="line"
+      />,
+    );
+    const segs = container.querySelectorAll("[data-segment]");
+    expect(segs).toHaveLength(2);
+    expect([...segs].map((x) => x.getAttribute("fill"))).toEqual(["#e8b04b", "#e86ba8"]);
+    expect(container.querySelectorAll("circle")).toHaveLength(0);
+  });
+  it("draws three equal segments for three rules", () => {
+    const { container } = render(
+      <DotLine
+        items={[{ key: "a", color: "#111", colors: ["#111", "#222", "#333"] }]}
+        ariaLabel="line"
+      />,
+    );
+    expect(container.querySelectorAll("[data-segment]")).toHaveLength(3);
+  });
   it("has the aria-label", () => {
     render(<DotLine items={items(2)} ariaLabel="Preview line" />);
     expect(screen.getByLabelText("Preview line")).toBeTruthy();

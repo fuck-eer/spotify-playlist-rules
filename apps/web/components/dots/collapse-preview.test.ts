@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 import { NEUTRAL_DOT, ruleColor } from "@/lib/palette";
 import { previewToDots } from "./collapse-preview";
 
-const s = (uri: string, ruleIndex: number | null, shiftedFrom: number | null = null) => ({
-  uri,
-  ruleIndex,
-  shiftedFrom,
-});
+const s = (
+  uri: string,
+  ruleIndex: number | null,
+  shiftedFrom: number | null = null,
+  ruleIndices: number[] = ruleIndex === null ? [] : [ruleIndex],
+) => ({ uri, ruleIndex, ruleIndices, shiftedFrom });
 
 describe("previewToDots", () => {
   it("collapses a repeat run of 3 into one looped dot", () => {
@@ -30,5 +31,18 @@ describe("previewToDots", () => {
     expect(dots[0]?.color).toBe(NEUTRAL_DOT);
     expect(dots[0]?.label).toBeUndefined();
     expect(dots[0]?.key).toBe("0");
+  });
+  it("gives a merged slot a split dot in each rule's colour", () => {
+    const dots = previewToDots([s("a", 0, null, [0, 1]), s("a", 1)], {}, ["pin_first", "every_n"]);
+    expect(dots[0]).toMatchObject({ colors: [ruleColor(0), ruleColor(1)], label: "#1+#2" });
+    expect(dots[1]?.colors).toBeUndefined();
+    expect(dots[1]?.color).toBe(ruleColor(1));
+  });
+  it("does not swallow a merged slot inside a repeat run", () => {
+    const dots = previewToDots([s("r", 0), s("r", 0, null, [0, 1]), s("r", 0)], {}, [
+      "repeat",
+      "every_n",
+    ]);
+    expect(dots.some((d) => d.colors?.length === 2)).toBe(true);
   });
 });

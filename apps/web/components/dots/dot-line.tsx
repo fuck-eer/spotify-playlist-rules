@@ -6,6 +6,8 @@ import { useEffect, useRef, useState, type JSX } from "react";
 export interface DotItem {
   key: string;
   color: string;
+  /** 2+ colours => split dot, equal segments (merged slot, ADR-0020) */
+  colors?: string[];
   /** tiny mono "#n" under the dot */
   label?: string;
   /** repeat count > 1 => self-loop + "N×" */
@@ -29,6 +31,16 @@ const PAD_X = 12;
 const ROW_H = 64;
 const DOT_Y = 34; // room above for loop/badge, below for label
 const EASE = [0.2, 0.8, 0.2, 1] as const;
+
+/** Pie wedge k of `count`, starting at 12 o'clock, clockwise. */
+function wedge(k: number, count: number): string {
+  const at = (t: number) => {
+    const a = (t / count) * 2 * Math.PI - Math.PI / 2;
+    return `${(R * Math.cos(a)).toFixed(3)} ${(R * Math.sin(a)).toFixed(3)}`;
+  };
+  const large = count === 1 ? 1 : 0;
+  return `M0 0 L${at(k)} A${R} ${R} 0 ${large} 1 ${at(k + 1)} Z`;
+}
 
 export function DotLine({ items, maxDots = 22, totalCount, ariaLabel }: DotLineProps): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
@@ -141,7 +153,13 @@ export function DotLine({ items, maxDots = 22, totalCount, ariaLabel }: DotLineP
               transition={reduce ? { duration: 0 } : { duration: 0.28, delay, ease: EASE }}
             >
               <title>{title || `slot ${i + 1}`}</title>
-              <circle r={R} fill={d.color} />
+              {d.colors && d.colors.length > 1 ? (
+                d.colors.map((c, k, all) => (
+                  <path key={k} data-segment d={wedge(k, all.length)} fill={c} />
+                ))
+              ) : (
+                <circle r={R} fill={d.color} />
+              )}
               {d.loop && d.loop > 1 ? (
                 <g>
                   <path

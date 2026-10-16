@@ -16,10 +16,16 @@ export function previewToDots(
     const name = names[slot.uri];
     if (name !== undefined) item.title = name;
     if (r !== null) {
-      item.label = `#${r + 1}`;
-      if (kinds[r] === "repeat") {
+      const merged = slot.ruleIndices.length > 1;
+      item.label = slot.ruleIndices.map((x) => `#${x + 1}`).join("+");
+      if (merged) item.colors = slot.ruleIndices.map(ruleColor);
+      if (kinds[r] === "repeat" && !merged) {
         let run = 1;
-        while (preview[i + 1]?.ruleIndex === r && preview[i + 1]?.uri === slot.uri) {
+        while (
+          preview[i + 1]?.ruleIndex === r &&
+          preview[i + 1]?.uri === slot.uri &&
+          preview[i + 1]?.ruleIndices.length === 1
+        ) {
           run++;
           i++;
         }
