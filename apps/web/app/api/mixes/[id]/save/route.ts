@@ -2,7 +2,7 @@ import { after, type NextRequest } from "next/server";
 import { requireRequestUser } from "@/lib/auth/require-user";
 import { getSql } from "@/lib/db/client";
 import { getMix } from "@/lib/db/mixes-repo";
-import { failStaleRuns, getRunningRun, startRun } from "@/lib/db/save-runs-repo";
+import { failStaleRuns, startRun } from "@/lib/db/save-runs-repo";
 import { HttpError, jsonError } from "@/lib/http";
 import { performSave } from "@/lib/save";
 import { spotifyForUser } from "@/lib/spotify-for-user";
@@ -20,18 +20,18 @@ export async function POST(
       throw new HttpError(404, "not_found", "That mix doesn't exist.");
     }
     await failStaleRuns(sql, user.id, id);
-    const running = await getRunningRun(sql, user.id, id);
-    if (running) {
+    const started = await startRun(sql, user.id, id);
+    if (!started.ok && started.reason === "in_progress") {
       return Response.json(
         {
           error: { code: "save_in_progress", message: "A save is already running." },
-          runId: running.id,
+          runId: started.runId,
         },
         { status: 409 },
       );
     }
-    const run = await startRun(sql, user.id, id);
-    if (!run) throw new HttpError(404, "not_found", "That mix doesn't exist.");
+    if (!started.ok) throw new HttpError(404, "not_found", "That mix doesn't exist.");
+    const run = started.run;
     after(() => performSave(sql, user.id, id, run.id, spotifyForUser(sql, user.id)));
     return Response.json({ runId: run.id }, { status: 202 });
   } catch (e) {

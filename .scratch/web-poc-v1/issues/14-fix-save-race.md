@@ -1,6 +1,6 @@
 # 14: One running save per Mix, enforced by the database
 
-**Status:** ready-for-agent
+**Status:** done
 **Type:** bug
 **Refs:** review P2; ticket 12; ADR-0015
 
@@ -16,5 +16,9 @@ POST /save is check-then-insert. Two concurrent POSTs can both start a run and w
 - route: two concurrent POSTs → exactly one 202 and one 409 carrying the same runId; only one run row exists.
 
 ## Acceptance criteria
-- [ ] At most one `running` save per Mix, even under concurrency
-- [ ] All tests pass
+- [x] At most one `running` save per Mix, even under concurrency
+- [x] All tests pass
+
+## Notes (implementation)
+- `startRun` returns `{ ok: true, run } | { ok: false, reason: "not_found" } | { ok: false, reason: "in_progress", runId }`. The route no longer does a separate running check.
+- If the winning run finishes between the 23505 and the re-read, the original error is rethrown (500); a retry then succeeds.

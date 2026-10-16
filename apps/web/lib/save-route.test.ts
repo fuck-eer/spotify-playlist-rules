@@ -136,6 +136,18 @@ describe.skipIf(!reachable)("save routes", () => {
     await Promise.all(tasks.splice(0));
   });
 
+  it("two concurrent POSTs start exactly one run; the other gets 409 with its id", async () => {
+    const results = await Promise.all([post(), post(), post()]);
+    const statuses = results.map((r) => r.status).sort();
+    expect(statuses).toEqual([202, 409, 409]);
+    const bodies = (await Promise.all(results.map((r) => r.json()))) as { runId: string }[];
+    expect(new Set(bodies.map((b) => b.runId)).size).toBe(1);
+    const [row] = await sql<{ n: number }[]>`select count(*)::int as n from save_runs`;
+    expect(row!.n).toBe(1);
+    release();
+    await Promise.all(tasks.splice(0));
+  });
+
   it("GET of another user's run is 404", async () => {
     const { runId } = (await (await post()).json()) as { runId: string };
     const other = (await insertTestUser(sql)).id;

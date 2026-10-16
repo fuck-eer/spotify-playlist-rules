@@ -60,18 +60,33 @@ function toRow(r: DbRow): SaveRunRow {
   };
 }
 
-/** Starts a run on the user's Mix; null when the Mix isn't theirs. */
+export type StartRunResult =
+  | { ok: true; run: SaveRunRow }
+  | { ok: false; reason: "not_found" }
+  | { ok: false; reason: "in_progress"; runId: string };
+
+/**
+ * Starts a run on the user's Mix. The partial unique index `save_runs_one_running` allows one
+ * running run per Mix, so concurrent starts lose with 23505 and get the winner's id.
+ */
 export async function startRun(
   sql: postgres.Sql,
   userId: string,
   mixId: string,
-): Promise<SaveRunRow | null> {
-  if (!UUID.test(mixId)) return null;
-  const [r] = await sql<DbRow[]>`
-    insert into save_runs as sr (mix_id)
-    select m.id from mixes m where m.id = ${mixId} and m.user_id = ${userId}
-    returning ${sql.unsafe(COLS)}`;
-  return r ? toRow(r) : null;
+): Promise<StartRunResult> {
+  if (!UUID.test(mixId)) return { ok: false, reason: "not_found" };
+  try {
+    const [r] = await sql<DbRow[]>`
+      insert into save_runs as sr (mix_id)
+      select m.id from mixes m where m.id = ${mixId} and m.user_id = ${userId}
+      returning ${sql.unsafe(COLS)}`;
+    return r ? { ok: true, run: toRow(r) } : { ok: false, reason: "not_found" };
+  } catch (e) {
+    if ((e as { code?: string }).code !== "23505") throw e;
+    const running = await getRunningRun(sql, userId, mixId);
+    if (!running) throw e;
+    return { ok: false, reason: "in_progress", runId: running.id };
+  }
 }
 
 export async function getRunningRun(

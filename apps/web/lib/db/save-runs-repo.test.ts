@@ -31,12 +31,18 @@ describe.skipIf(!reachable)("save runs repo", () => {
       )
     ).id;
   });
+  async function started(u: string) {
+    const r = await startRun(sql, u, mixId);
+    if (!r.ok) throw new Error(r.reason);
+    return r.run;
+  }
+
   afterAll(async () => {
     await sql.end();
   });
 
   it("runs through its lifecycle", async () => {
-    const run = (await startRun(sql, user, mixId))!;
+    const run = await started(user);
     expect(run).toMatchObject({
       mixId,
       status: "running",
@@ -73,7 +79,7 @@ describe.skipIf(!reachable)("save runs repo", () => {
   });
 
   it("records a failure message", async () => {
-    const run = (await startRun(sql, user, mixId))!;
+    const run = await started(user);
     await finishRun(sql, user, run.id, { status: "failed", error: "Nope." });
     expect(await getRun(sql, user, mixId, run.id)).toMatchObject({
       status: "failed",
@@ -83,8 +89,8 @@ describe.skipIf(!reachable)("save runs repo", () => {
 
   it("every write and read is scoped to the mix owner", async () => {
     const other = (await insertTestUser(sql)).id;
-    expect(await startRun(sql, other, mixId)).toBeNull();
-    const run = (await startRun(sql, user, mixId))!;
+    expect(await startRun(sql, other, mixId)).toEqual({ ok: false, reason: "not_found" });
+    const run = await started(user);
     expect(await getRunningRun(sql, other, mixId)).toBeNull();
     await updateRun(sql, other, run.id, { phase: "writing", done: 5 });
     await finishRun(sql, other, run.id, { status: "failed", error: "x" });
@@ -97,7 +103,7 @@ describe.skipIf(!reachable)("save runs repo", () => {
   });
 
   it("fails runs with no progress for over 5 minutes, and leaves recent ones alone", async () => {
-    const stale = (await startRun(sql, user, mixId))!;
+    const stale = await started(user);
     await sql`update save_runs set updated_at = now() - interval '6 minutes' where id = ${stale.id}`;
     await failStaleRuns(sql, user, mixId);
     expect(await getRun(sql, user, mixId, stale.id)).toMatchObject({
@@ -106,22 +112,33 @@ describe.skipIf(!reachable)("save runs repo", () => {
     });
     expect((await getRun(sql, user, mixId, stale.id))?.finishedAt).not.toBeNull();
 
-    const fresh = (await startRun(sql, user, mixId))!;
+    const fresh = await started(user);
     await sql`update save_runs set updated_at = now() - interval '1 minute' where id = ${fresh.id}`;
     await failStaleRuns(sql, user, mixId);
     expect((await getRun(sql, user, mixId, fresh.id))?.status).toBe("running");
   });
 
   it("updateRun bumps the heartbeat", async () => {
-    const run = (await startRun(sql, user, mixId))!;
+    const run = await started(user);
     await sql`update save_runs set updated_at = now() - interval '6 minutes' where id = ${run.id}`;
     await updateRun(sql, user, run.id, { done: 1 });
     await failStaleRuns(sql, user, mixId);
     expect((await getRun(sql, user, mixId, run.id))?.status).toBe("running");
   });
 
+  it("refuses a second running run for the same mix and names the existing one", async () => {
+    const run = await started(user);
+    expect(await startRun(sql, user, mixId)).toEqual({
+      ok: false,
+      reason: "in_progress",
+      runId: run.id,
+    });
+    await finishRun(sql, user, run.id, { status: "succeeded" });
+    expect((await startRun(sql, user, mixId)).ok).toBe(true);
+  });
+
   it("getRun is scoped to the mix owner and the mix", async () => {
-    const run = (await startRun(sql, user, mixId))!;
+    const run = await started(user);
     const other = (await insertTestUser(sql)).id;
     expect(await getRun(sql, other, mixId, run.id)).toBeNull();
     const otherMix = (
