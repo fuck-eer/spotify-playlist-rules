@@ -12,7 +12,7 @@ A server-side Spotify library: building the PKCE authorize URL, exchanging and r
 
 ## Files
 - `packages/spotify/src/errors.ts`, `config.ts`, `pkce.ts`, `oauth.ts`, `client.ts`, `readers.ts`, `index.ts` (remove `SPOTIFY_PACKAGE` and its test)
-- `packages/spotify/test/fake-spotify.ts`: a tiny `node:http` server with programmable routes (`fake.on(method, pathRegex, handler)`), a `fake.calls` log, a `fake.url`, and `close()`.
+- `packages/spotify/test/fake-spotify.ts`: a tiny `node:http` server with programmable routes (`fake.on(method, pathRegex, handler)`), a `fake.calls` log, a `fake.url`, and `close()`. Export it as a package subpath: in `package.json`, `exports: { ".": "./src/index.ts", "./testing": "./test/fake-spotify.ts" }` → `import { startFakeSpotify } from "@rulemix/spotify/testing"`, where `startFakeSpotify(): Promise<FakeSpotify>`. Tickets 05, 06 and 09–12 use it.
 - tests: `src/pkce.test.ts`, `src/oauth.test.ts`, `src/client.test.ts`, `src/readers.test.ts`
 
 ## Exported interface (exact)
