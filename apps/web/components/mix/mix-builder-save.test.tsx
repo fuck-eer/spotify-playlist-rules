@@ -26,6 +26,9 @@ const MIX: MixRow = {
 const run = (p: Partial<SaveRunRow>): SaveRunRow => ({
   id: "run1",
   mixId: "m1",
+  kind: "save",
+  playback: null,
+  playlistId: null,
   status: "running",
   phase: "reading",
   done: 0,

@@ -1,9 +1,18 @@
 import type postgres from "postgres";
 import { isUuid } from "../validation";
 
+export type RunKind = "save" | "play";
+/** Result of Play's remote-play step (ADR-0022, ADR-0023). */
+export type PlaybackOutcome = "started" | "not_started" | "no_device" | "needs_scopes";
+
 export interface SaveRunRow {
   id: string;
   mixId: string;
+  kind: RunKind;
+  /** Play runs only; null until the run succeeds. */
+  playback: PlaybackOutcome | null;
+  /** The playlist written (Target for Save, Player playlist for Play). */
+  playlistId: string | null;
   status: "running" | "succeeded" | "failed";
   phase: "reading" | "writing" | "done";
   done: number;
@@ -17,12 +26,25 @@ export interface SaveRunRow {
 }
 
 export type RunPatch = Partial<
-  Pick<SaveRunRow, "phase" | "done" | "total" | "tracksWritten" | "recreated" | "retries429">
+  Pick<
+    SaveRunRow,
+    | "phase"
+    | "done"
+    | "total"
+    | "tracksWritten"
+    | "recreated"
+    | "retries429"
+    | "playback"
+    | "playlistId"
+  >
 >;
 
 interface DbRow {
   id: string;
   mix_id: string;
+  kind: RunKind;
+  playback: PlaybackOutcome | null;
+  playlist_id: string | null;
   status: SaveRunRow["status"];
   phase: SaveRunRow["phase"];
   done: number;
@@ -41,12 +63,15 @@ export const SAVE_FAILED = "Couldn't create the playlist. Check your connection 
 export const STALE_RUN_MINUTES = 5;
 
 const COLS =
-  "sr.id, sr.mix_id, sr.status, sr.phase, sr.done, sr.total, sr.tracks_written, sr.recreated, sr.retries_429, sr.error, sr.started_at, sr.finished_at";
+  "sr.id, sr.mix_id, sr.kind, sr.playback, sr.playlist_id, sr.status, sr.phase, sr.done, sr.total, sr.tracks_written, sr.recreated, sr.retries_429, sr.error, sr.started_at, sr.finished_at";
 
 function toRow(r: DbRow): SaveRunRow {
   return {
     id: r.id,
     mixId: r.mix_id,
+    kind: r.kind,
+    playback: r.playback,
+    playlistId: r.playlist_id,
     status: r.status,
     phase: r.phase,
     done: r.done,
@@ -66,19 +91,20 @@ export type StartRunResult =
   | { ok: false; reason: "in_progress"; runId: string };
 
 /**
- * Starts a run on the user's Mix. The partial unique index `save_runs_one_running` allows one
+ * Starts a Save or Play run on the user's Mix (ADR-0024). The partial unique index `save_runs_one_running` allows one
  * running run per Mix, so concurrent starts lose with 23505 and get the winner's id.
  */
 export async function startRun(
   sql: postgres.Sql,
   userId: string,
   mixId: string,
+  kind: RunKind = "save",
 ): Promise<StartRunResult> {
   if (!isUuid(mixId)) return { ok: false, reason: "not_found" };
   try {
     const [r] = await sql<DbRow[]>`
-      insert into save_runs as sr (mix_id)
-      select m.id from mixes m where m.id = ${mixId} and m.user_id = ${userId}
+      insert into save_runs as sr (mix_id, kind)
+      select m.id, ${kind} from mixes m where m.id = ${mixId} and m.user_id = ${userId}
       returning ${sql.unsafe(COLS)}`;
     return r ? { ok: true, run: toRow(r) } : { ok: false, reason: "not_found" };
   } catch (e) {
@@ -109,13 +135,15 @@ export async function updateRun(
   id: string,
   patch: RunPatch,
 ): Promise<void> {
-  const set: Record<string, string | number | boolean> = {};
+  const set: Record<string, string | number | boolean | null> = {};
   if (patch.phase !== undefined) set.phase = patch.phase;
   if (patch.done !== undefined) set.done = patch.done;
   if (patch.total !== undefined) set.total = patch.total;
   if (patch.tracksWritten !== undefined) set.tracks_written = patch.tracksWritten;
   if (patch.recreated !== undefined) set.recreated = patch.recreated;
   if (patch.retries429 !== undefined) set.retries_429 = patch.retries429;
+  if (patch.playback !== undefined) set.playback = patch.playback;
+  if (patch.playlistId !== undefined) set.playlist_id = patch.playlistId;
   const cols = Object.keys(set);
   if (cols.length === 0) return;
   // Bumps the heartbeat; finished runs are left alone.
