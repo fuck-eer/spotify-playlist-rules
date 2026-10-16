@@ -4,7 +4,7 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Glossary:** Player playlist, Target playlist, Bench, Rule copy. **ADRs:** 0021, 0022, 0026, 0030.
 

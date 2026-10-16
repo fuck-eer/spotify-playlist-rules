@@ -1,5 +1,4 @@
 import {
-  build,
   type BuildIssue,
   type BuildStats,
   type GraphNode,
@@ -7,9 +6,9 @@ import {
 } from "@rulemix/rules-engine";
 import type { SpotifyClient } from "@rulemix/spotify";
 import type postgres from "postgres";
-import { listMixRules } from "./db/mix-rules-repo";
 import { getMix } from "./db/mixes-repo";
 import { HttpError } from "./http";
+import { buildForMix } from "./mix-build";
 import { readSourceTracks } from "./source-tracks";
 
 /** Temporary v1 dot-line slot (adapter until the cover graph lands in v2-web/04). */
@@ -61,25 +60,8 @@ export async function computePreview(
 ): Promise<PreviewResponse> {
   const mix = await getMix(sql, userId, mixId);
   if (!mix) throw new HttpError(404, "not_found", "That mix doesn't exist.");
-  const [mixRules, source] = await Promise.all([
-    listMixRules(sql, userId, mixId),
-    readSourceTracks(sql, client, mix.source),
-  ]);
-  const result = build({
-    source,
-    rules: mixRules.map((r) => ({
-      id: r.id,
-      kind: r.kind,
-      n: r.n,
-      uri: r.trackUri,
-      removedPlays: 0,
-      deletedCopies: [],
-    })),
-    keepSourceOrder: mix.keepSourceOrder,
-    seed: mix.shuffleSeed,
-    manualOrder: null,
-    bench: [],
-  });
+  const source = await readSourceTracks(sql, client, mix.source);
+  const { result, rules: mixRules } = await buildForMix(sql, userId, mix, source);
   const names: Record<string, string> = {};
   for (const t of source) if (t) names[t.uri] = t.name;
   return {

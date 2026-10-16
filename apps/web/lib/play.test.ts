@@ -122,6 +122,18 @@ describe.skipIf(!reachable)("performPlay", () => {
     expect(await playerId()).toBe("tgt-2");
   });
 
+  it("v2: never writes benched songs; a Repeat with a removed play writes the lower count", async () => {
+    const T = (id: string) => `spotify:track:${id}`;
+    await sql`update mixes set manual_order = ${[T("bassline"), T("sunrise")]}::text[],
+      bench = ${[T("sunrise"), T("gone")]}::text[] where id = ${mixId}`;
+    await sql`update rules set n = 3 where kind = 'repeat'`;
+    await sql`update mix_rules set removed_plays = 1 where mix_id = ${mixId}`;
+    expect((await play()).status).toBe("succeeded");
+    expect(putUris()[0]![1]).toEqual([T("bassline"), T("bassline")]);
+    const [m] = await sql<{ bench: string[] }[]>`select bench from mixes where id = ${mixId}`;
+    expect(m!.bench).toEqual([T("sunrise")]);
+  });
+
   it("writes exactly what Save writes, repeats included", async () => {
     await play();
     const played = putUris()[0]![1];
