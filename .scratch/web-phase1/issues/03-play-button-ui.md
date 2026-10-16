@@ -4,9 +4,9 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Mix page passes `canAutoPlay` from stored `users.scopes` via `hasPlaybackScopes`
-- [ ] `openExternal(url)` in `apps/web/lib/open-external.ts` (calls `window.location.assign`)
-- [ ] Component tests: Play posts `/play`, polls `/save/<runId>`, toast copy per outcome, `openExternal("https://open.spotify.com/playlist/<id>")` once on success; failed Play → error toast with Retry; hint + `/api/auth/login` link shown only when `canAutoPlay` is false; both buttons disabled while running; existing Save tests still pass
-- [ ] Playwright: Play on a seeded mix navigates to `https://open.spotify.com/playlist/…` (route intercepted); existing save spec passes
+- [x] Mix page passes `canAutoPlay` from stored `users.scopes` via `hasPlaybackScopes`
+- [x] `openExternal(url)` in `apps/web/lib/open-external.ts` (calls `window.location.assign`)
+- [x] Component tests: Play posts `/play`, polls `/save/<runId>`, toast copy per outcome, `openExternal("https://open.spotify.com/playlist/<id>")` once on success; failed Play → error toast with Retry; hint + `/api/auth/login` link shown only when `canAutoPlay` is false; both buttons disabled while running; existing Save tests still pass
+- [x] Playwright: Play on a seeded mix navigates to `https://open.spotify.com/playlist/…` (route intercepted); existing save spec passes

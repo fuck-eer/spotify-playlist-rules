@@ -39,7 +39,8 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2Icon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import type { SaveRunRow } from "@/lib/db/save-runs-repo";
+import type { RunKind, SaveRunRow } from "@/lib/db/save-runs-repo";
+import { openExternal } from "@/lib/open-external";
 import type { PreviewResponse } from "@/lib/preview";
 import { PreviewPanel, type PreviewState } from "./preview-panel";
 import { RuleCard } from "./rule-card";
@@ -70,11 +71,14 @@ export function MixBuilder({
   rules: initialRules = [],
   maxRules = 10,
   addRuleId = null,
+  canAutoPlay = true,
 }: {
   mix: MixRow | null;
   rules?: MixRuleRow[];
   maxRules?: number;
   addRuleId?: string | null;
+  /** Stored scopes include the playback scopes (ADR-0023). */
+  canAutoPlay?: boolean;
 }) {
   const router = useRouter();
   const [mixId, setMixId] = useState<string | null>(mix?.id ?? null);
@@ -362,13 +366,17 @@ export function MixBuilder({
     refreshPreview();
   }
 
-  async function onSave(): Promise<void> {
+  const onSave = (): Promise<void> => startRun("save");
+  const onPlay = (): Promise<void> => startRun("play");
+
+  /** Save and Play share one run at a time per Mix and one poller (ADR-0024). */
+  async function startRun(kind: RunKind): Promise<void> {
     if (!mixId || saveBusy.current) return;
     saveBusy.current = true;
     setStartingSave(true);
     let started = false;
     try {
-      const res = await fetch(`/api/mixes/${mixId}/save`, { method: "POST" });
+      const res = await fetch(`/api/mixes/${mixId}/${kind}`, { method: "POST" });
       if (res.status === 202 || res.status === 409) {
         const body = (await res.json()) as { runId?: string };
         if (body.runId) {
@@ -378,17 +386,17 @@ export function MixBuilder({
           return;
         }
       }
-      saveFailed(res.ok ? SAVE_FAILED_COPY : await errorMessage(res));
+      runFailed(kind, res.ok ? SAVE_FAILED_COPY : await errorMessage(res));
     } catch {
-      saveFailed(SAVE_FAILED_COPY);
+      runFailed(kind, SAVE_FAILED_COPY);
     } finally {
       if (!started) saveBusy.current = false;
       setStartingSave(false);
     }
   }
 
-  function saveFailed(message: string): void {
-    toast.error(message, { action: { label: "Retry", onClick: () => void onSave() } });
+  function runFailed(kind: RunKind, message: string): void {
+    toast.error(message, { action: { label: "Retry", onClick: () => void startRun(kind) } });
   }
 
   // Poll the run every 1 s while it is running (spec A5).
@@ -409,7 +417,14 @@ export function MixBuilder({
           saveBusy.current = false;
           setSaveRunId(null);
           setSaveRun(null);
-          if (run.status === "succeeded") {
+          if (run.status === "succeeded" && run.kind === "play") {
+            toast.success(
+              run.playback === "started"
+                ? "Playing on Spotify."
+                : "rulemix player is ready. Opening Spotify…",
+            );
+            if (run.playlistId) openExternal(spotifyUrl(run.playlistId));
+          } else if (run.status === "succeeded") {
             const base = `Saved "${targetName(savedName)}" to Spotify. Play it with shuffle off.`;
             toast.success(
               run.recreated ? `${base} It was recreated because the old one was gone.` : base,
@@ -417,7 +432,7 @@ export function MixBuilder({
             router.refresh();
             void showSaved();
           } else {
-            saveFailed(run.error ?? SAVE_FAILED_COPY);
+            runFailed(run.kind, run.error ?? SAVE_FAILED_COPY);
           }
         } catch {
           // A missed poll is retried on the next tick.
@@ -686,14 +701,32 @@ export function MixBuilder({
               </p>
             </div>
           ) : null}
-          <button
-            type="button"
-            disabled={saving}
-            onClick={() => void onSave()}
-            className="w-full rounded-full bg-[#1DB954] px-5 py-3.5 text-[15px] font-bold text-black disabled:opacity-60"
-          >
-            Save to Spotify
-          </button>
+          <div className="flex gap-2.5">
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => void onPlay()}
+              className="flex-1 rounded-full bg-[#1DB954] px-5 py-3.5 text-[15px] font-bold text-black disabled:opacity-60"
+            >
+              Play
+            </button>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => void onSave()}
+              className="rounded-full bg-s2 px-5 py-3.5 text-[15px] font-semibold text-tx disabled:opacity-60"
+            >
+              Save to Spotify
+            </button>
+          </div>
+          {canAutoPlay ? null : (
+            <a
+              href="/api/auth/login"
+              className="mt-2 block text-xs font-semibold text-tx underline"
+            >
+              Log in again to enable auto-play
+            </a>
+          )}
           <p className="mt-2 font-mono text-[11px] text-dim">
             Play with shuffle off. Saving while it&apos;s playing may skip ahead.
           </p>

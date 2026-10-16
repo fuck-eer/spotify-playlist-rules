@@ -70,7 +70,7 @@ describe.skipIf(!reachable)("auth routes", () => {
     restore();
   });
 
-  it("login sets a signed oauth cookie and redirects to authorize with the 4 scopes", () => {
+  it("login sets a signed oauth cookie and redirects to authorize with the configured scopes", () => {
     const res = login();
     expect(res.status).toBe(302);
     const loc = new URL(res.headers.get("location")!);
