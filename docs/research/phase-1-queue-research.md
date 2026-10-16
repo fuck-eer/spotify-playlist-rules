@@ -69,4 +69,18 @@ Not run. It would need decrypting the stored refresh token outside the app, and 
 
 ## Live test results
 
-2026-10-16, about 23:00 IST: **blocked, not run.** The local user's stored grant only has the scopes `playlist-read-private playlist-read-collaborative user-library-read playlist-modify-private`. The player endpoints need `user-read-playback-state` (devices, queue, currently-playing) and `user-modify-playback-state` (shuffle, play, next, queue, pause). A refresh token can't gain new scopes, so we need a fresh consent first. To unblock: add both scopes to `SCOPES` in `packages/spotify/src/config.ts`, log in again on the local app, then run the test. No Spotify calls were made and playback was not touched.
+2026-10-16, about 23:00 IST, on Nishchay's account (Premium). The token was refreshed through the app's own `dbTokenStore` and `refreshAccessToken`. Two runs. The one-off script was deleted.
+
+- **Devices:** for about 2.5 minutes none was active (only the "Everywhere" and "Praveen's Echo Dot" speakers were listed). Then "OnePlus 12" (Smartphone) became active. Before the test the phone was playing a Spotify Daily Mix with shuffle **off**.
+- **Shuffle off:** 200, so it works.
+- **`PUT /me/player/play` with uris [A,B,B,C,A]:** returned **204, but nothing played.** Straight after, `currently-playing` and the queue's `currently_playing` were null and the queue was empty. Run 1 used A = an item with an empty name (probably unavailable), so it was re-run with named tracks: A=Hypocrite, B=Kissing Mouths, C=Demons. Same result.
+- **`POST /me/player/next` x4 and `PUT /me/player/pause`:** **403 "Player command failed: Restriction violated"**, consistent with there being no playback session.
+- **Order seen:** none. All 5 polls were null, so the duplicate order is **not confirmed**.
+- **`POST /me/player/queue` of C twice:** **200 + 200**, but `GET /me/player/queue` still showed it empty (no session), so queued duplicates are **not confirmed** either.
+- **Restore:** shuffle set back to the original `false` (200). Pause returned 403 because nothing was playing. The phone ended up stopped, not playing its Daily Mix.
+
+**How to read this:** a 204 from `play` does **not** mean playback started. Two likely causes:
+- **(a)** The list repeats its first track (A at positions 0 and 4). This matches the forum report that starting at an earlier copy of a repeated URI is rejected [6].
+- **(b)** The phone app wasn't truly ready (it had just become active, and Android may throttle a backgrounded Spotify).
+
+**Design impact:** after `play`, always confirm with `currently-playing`, and retry or alert if it's null. Avoid repeating the first URI later in the list (for example, start with a unique track). Before relying on duplicates, run a follow-up test: (1) a list with no duplicates, then (2) [A,B,B,C,D] where the first track isn't repeated.
