@@ -372,4 +372,23 @@ A primary **Play** button on the Mix page. It writes the Mix's order into my one
 ### Out of scope
 - Queue manipulation, `uris`-list play, pause/skip/seek, device picker, transferring playback.
 - Deleting old `Rules:` playlists.
-- The Android SDK queue test (next, before any Kotlin work).
+- The Android app's own Play flow: see *Android playback* below (ADR-0026).
+
+## Android playback (ADR-0026)
+
+Status: decided by Nishchay on 2026-10-17; the mobile grill is still open.
+- Android uses the same Player playlist as web. Play calls the same server Play run (`POST /api/mixes/{id}/play`), which overwrites `rulemix player` via the Web API (create if missing, per-user lock).
+- When the run has succeeded, the app calls App Remote `setShuffle(false)` then `play(spotify:playlist:<playlistId>)`, which starts from the first track. If App Remote isn't connected or the call fails, the app opens `https://open.spotify.com/playlist/<id>` instead.
+- No SDK queue (`queue()`), no dummy start playlist. ADR-0025 is superseded.
+- Open (mobile grill): what to do about songs the user queued by hand (they always play first), the stack, and the screens.
+
+## v2 ordering model (ADR-0027 to ADR-0030)
+
+Status: decided in the grill on 2026-10-17; not yet built. Supersedes ADR-0005 and A7.
+- **Rules add copies** (ADR-0027): the Original song stays; Start with adds a Rule copy at slot 1, Insert every N adds copies on its grid, Repeat N adds back-to-back copies.
+- **Manual order** (ADR-0028): only Original songs can be dragged. A drag saves the order of Original songs per Mix (server-side, synced web/Android). Reshuffle clears it and picks a new seed.
+- **Rule copies keep their slots** (ADR-0029): Start with at slot 1; Insert every N on its grid counted over the final list. Original songs flow around them.
+- **Removal** (ADR-0030): any song can be dragged to the trash. Removed Original songs go to the Removed list and stay removed across Reshuffle until restored. Trashing one every-N copy removes only that slot. Trashing a stacked Repeat lowers its count by one; at 1 the rule disappears. Rule copies survive their Original's removal.
+- **Engine input** grows: `manualOrder: string[] | null` and `removed` (Original URIs plus removed every-N slot indexes per rule). Repeat counts are edited on the rule itself.
+- **Data model** (to design): per-Mix manual order and Removed list storage.
+- **Open:** what happens to the Manual order and Removed list when the Source playlist changes in Spotify.

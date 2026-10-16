@@ -1,6 +1,6 @@
 # ADR-0025: Android playback uses the App Remote queue
 
-Status: Accepted (Nishchay, 2026-10-17). Pre-existing queue items are an **open problem**.
+Status: **Superseded by ADR-0026** (Nishchay, 2026-10-17). Previously accepted 2026-10-17.
 
 ## Context
 

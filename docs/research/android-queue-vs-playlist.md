@@ -1,6 +1,6 @@
 # Android playback: SDK queue vs the phase-1 Player playlist
 
-Date: 2026-10-17. Status: desk comparison + one pending on-device test (spike v0.4, Test 4). Inputs: `phase-1-queue-research.md`, ADR-0021..0025, spike results (v0.2/v0.3).
+Date: 2026-10-17. Status: **Decided** (Nishchay, 2026-10-17): option 2, the Player playlist, recorded in ADR-0026, which supersedes ADR-0025. Spike v0.4 Test 4 is optional confirmation only. Inputs: `phase-1-queue-research.md`, ADR-0021..0025, spike results (v0.2/v0.3).
 
 ## The two options
 
@@ -42,7 +42,7 @@ Nishchay's recollection ("starting a 3-song playlist replaces my 100-song queue"
 
 Go with **(2) the Player playlist on Android**, with App Remote used only to start playback and read player state. It is already built and tested for web, gives exact order with repeats, has no self-stacking leftovers, and keeps both apps on one mechanism. The dummy-start trick does not clear hand-queued songs according to Spotify's own docs and moderators [1][3][4], and the queue approach adds a new failure (old mix leftovers) that (2) does not have.
 
-For hand-queued songs (affects both options): show a one-time hint and, while the app is in the foreground, use PlayerState to detect a track that isn't from the Player playlist context and offer "Skip to mix". Revisit only if spike Test 4 surprisingly shows a playlist start clears Next in queue. This would supersede the "queue-based" decision in ADR-0025 (needs Nishchay's approval).
+For hand-queued songs (affects both options): show a one-time hint and, while the app is in the foreground, use PlayerState to detect a track that isn't from the Player playlist context and offer "Skip to mix". Revisit only if spike Test 4 surprisingly shows a playlist start clears Next in queue. **Accepted:** ADR-0026 supersedes ADR-0025.
 
 ## Sources
 

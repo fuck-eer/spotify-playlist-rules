@@ -1,6 +1,6 @@
 # ADR-0005: Rule songs are removed from the base list
 
-Status: Accepted (Nishchay, 2026-10-16)
+Status: **Superseded by ADR-0027** (Nishchay, 2026-10-17). Previously accepted 2026-10-16.
 
 ## Context
 

@@ -3,7 +3,7 @@
 - **Rule**: a reusable, song-less intent in the global rule library: an action type plus its parameters (e.g. "play N times"). Gets a song only when added to a Mix. A Rule used by any Mix can't be deleted, only archived.
 - **Mix**: a session: a Source playlist + a Rule Set + options (base order, seed), producing one Target playlist. Max rules set by MAX_RULES_PER_MIX (default 10, ADR-0017). One Target playlist per Mix (ADR-0015).
 - **Rule Set**: the ordered list of Rules in a Mix, each bound to a song from the Source. Order = priority (earlier wins; see ADR-0006).
-- **Base list**: the Source tracks after removing every song bound to a rule (ADR-0005), ordered by the base order mode (ADR-0004). Rules are applied on top of it.
+- **Base list**: the Source tracks minus the Removed list (rule songs are no longer removed: ADR-0027, superseding ADR-0005), ordered by the Manual order if set (ADR-0028), otherwise by the base order mode (ADR-0004). Rules are applied on top of it.
 - **Source playlist**: the input: an owned or collaborative playlist, or Liked Songs. Spotify-made and other users' playlists aren't readable.
 - **Target playlist**: the private playlist the app writes, named `Rules: <name>`. Created once, overwritten on each regeneration. Played with shuffle off. Tracked by ID, so renaming in Spotify is safe; recreated on Save if deleted (ADR-0016).
 - **Pin first**: rule placing its song at slot 1.
@@ -15,6 +15,10 @@
 - **Unavailable track**: a source item that comes back null, local or not playable. Skipped from the output; counted in the Preview (ADR-0011).
 - **Regenerate**: recompute the Preview only; never writes to Spotify (ADR-0013).
 - **Save to Spotify**: the explicit, optional action that writes the engine output to the Mix's Target playlist.
-- **Player playlist**: the one private playlist per user, `rulemix player`, that Play overwrites with a Mix's engine output. Tracked by ID per user; recreated if missing (ADR-0021).
+- **Player playlist**: the one private playlist per user, `rulemix player`, that Play overwrites with a Mix's engine output. Tracked by ID per user; recreated if missing (ADR-0021). Used by both web and Android; Android starts it via App Remote with shuffle off (ADR-0026).
 - **Play**: the primary Mix action: write the engine output to the Player playlist, start it on the user's active Spotify device when possible (shuffle off, ADR-0022), then open it in Spotify.
 - **Playback outcome**: the result of Play's remote-play step: `started`, `not_started`, `no_device` or `needs_scopes` (ADR-0022, ADR-0023).
+- **Original song**: a song that comes from the Source playlist. Shown with a grey outer ring. The only kind of song that can be dragged to reorder (ADR-0028). It stays in the list when a rule targets it (ADR-0027).
+- **Rule copy**: an extra copy of a song added by a rule (Start with, Insert every N, Repeat). Shown with a ring in its rule's colour. Keeps its slot; can't be reordered, only trashed (ADR-0029, ADR-0030). Survives removal of its Original song.
+- **Manual order**: the user's dragged order of Original songs, saved per Mix on the server and synced web/Android. Replaces the seeded order; cleared by Reshuffle (ADR-0028).
+- **Removed list**: the Original songs a user trashed from a Mix. They stay removed across Reshuffle until restored from this list. Saved per Mix (ADR-0030).
