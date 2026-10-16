@@ -33,3 +33,21 @@ pnpm db:migrate                      # with DATABASE_URL exported
 ```
 
 The box has no systemd, so start the cluster after a reboot. Logs: `/var/log/postgresql/postgresql-16-main.log`.
+
+## Android app (`apps/android`)
+
+Native Kotlin + Jetpack Compose (ADR-0031), package `com.rulemix.app`, minSdk 26, targetSdk 33.
+Modules: `:app` (UI, networking, App Remote) and `:engine` (pure-JVM Kotlin port of the rules
+engine, tested against `packages/rules-engine/fixtures`).
+
+On the box, JDK 17, the Android SDK 34 and Gradle live in `~/tools`:
+
+```sh
+cd apps/android
+export JAVA_HOME=~/tools/jdk ANDROID_HOME=~/tools/android
+echo "sdk.dir=$ANDROID_HOME" > local.properties
+SPOTIFY_ENV_FILE=../web/.env.local ./gradlew :app:assembleDebug :app:testDebugUnitTest :engine:test
+```
+
+`SPOTIFY_CLIENT_ID` (or `SPOTIFY_ENV_FILE`) is read at build time; `RULEMIX_API_BASE_URL`
+overrides the API host (default `https://rulemix.vercel.app`). CI: `.github/workflows/android.yml`.

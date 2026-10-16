@@ -1,0 +1,28 @@
+name: android
+
+on:
+  pull_request:
+    paths:
+      - "apps/android/**"
+      - "packages/rules-engine/fixtures/**"
+  push:
+    branches: [integration]
+    paths:
+      - "apps/android/**"
+      - "packages/rules-engine/fixtures/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v3
+      - run: ./gradlew --console=plain :app:assembleDebug :app:testDebugUnitTest :engine:test
