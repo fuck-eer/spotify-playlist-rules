@@ -15,7 +15,7 @@
 ## Commands (root)
 
 - `pnpm build` · `pnpm dev` · `pnpm typecheck` · `pnpm lint` · `pnpm test` · `pnpm test:e2e` · `pnpm db:migrate` · `pnpm format`
-- **Before every commit:** `pnpm typecheck && pnpm lint && pnpm test` must pass.
+- **Before every commit:** `pnpm typecheck && pnpm lint && pnpm test` must pass. `pnpm lint` runs ESLint (CLI, flat config) and `prettier --check .` (also available as `pnpm format:check`).
 - **Practice TDD:** write a failing test first.
 
 ## Naming
