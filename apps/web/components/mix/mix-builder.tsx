@@ -40,7 +40,7 @@ import {
 import { Loader2Icon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import type { PlaybackOutcome, RunKind, SaveRunRow } from "@/lib/db/save-runs-repo";
-import { GraphPanel } from "@/components/graph/graph-panel";
+import { MixGraph } from "@/components/graph/mix-graph";
 import { SongPopover, UnavailableCard } from "@/components/graph/song-popover";
 import type { GraphNode, RuleKind } from "@rulemix/rules-engine";
 import { useMixState } from "@/lib/use-mix-state";
@@ -384,8 +384,25 @@ export function MixBuilder({
     refreshPreview();
   }
 
-  async function onReshuffle(): Promise<void> {
+  const [confirmOrder, setConfirmOrder] = useState<"reshuffle" | "reset" | null>(null);
+  const hasManualOrder = graph.state?.arrangement.manualOrder != null;
+
+  async function onResetOrder(): Promise<void> {
     if (!mixId) return;
+    const res = await fetch(`/api/mixes/${mixId}/reset-order`, { method: "POST" });
+    if (!res.ok) {
+      toast.error(await errorMessage(res));
+      return;
+    }
+    refreshPreview();
+  }
+
+  async function onReshuffle(confirmed = false): Promise<void> {
+    if (!mixId) return;
+    if (hasManualOrder && !confirmed) {
+      setConfirmOrder("reshuffle");
+      return;
+    }
     const res = await fetch(`/api/mixes/${mixId}/reshuffle`, { method: "POST" });
     if (!res.ok) {
       toast.error(await errorMessage(res));
@@ -643,14 +660,25 @@ export function MixBuilder({
             <div className="mb-2 mt-5 font-mono text-[11px] font-semibold tracking-[.12em] text-mut">
               PREVIEW
             </div>
-            <GraphPanel
+            <MixGraph
+              mixId={mixId}
               status={graph.status}
               error={graph.error}
               state={graph.state}
               result={graph.result}
+              replace={graph.replace}
               onTap={(node, el) => setTapped({ node, el })}
               onSkipped={() => setUnavailableOpen(true)}
             />
+            {hasManualOrder ? (
+              <button
+                type="button"
+                onClick={() => setConfirmOrder("reset")}
+                className="mt-2 rounded-full bg-s2 px-3 py-1 text-xs font-semibold"
+              >
+                Reset to rule order
+              </button>
+            ) : null}
             {tapped && graph.state ? (
               <SongPopover
                 uri={tapped.node.uri}
@@ -908,6 +936,38 @@ export function MixBuilder({
               }}
             >
               Change
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog
+        open={confirmOrder !== null}
+        onOpenChange={(o) => {
+          if (!o) setConfirmOrder(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmOrder === "reset"
+                ? "Reset to rule order?"
+                : "Reshuffle and clear your order?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Your own order is cleared. The bench and deleted copies stay.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Not now</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const which = confirmOrder;
+                setConfirmOrder(null);
+                if (which === "reset") void onResetOrder();
+                else void onReshuffle(true);
+              }}
+            >
+              {confirmOrder === "reset" ? "Reset" : "Reshuffle"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

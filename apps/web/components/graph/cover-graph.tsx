@@ -81,7 +81,9 @@ export function CoverGraph({
   }, []);
 
   const l = layout(nodes.length, width || 360);
-  useEffect(() => onLayout?.(l, scroller.current));
+  useEffect(() => {
+    onLayout?.(l, scroller.current);
+  });
   const firstRow = Math.max(0, Math.floor(view.top / l.rowHeight) - OVERSCAN_ROWS);
   const lastRow = Math.min(
     l.rows - 1,
