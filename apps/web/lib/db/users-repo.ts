@@ -6,7 +6,7 @@ export interface PlayerState {
 }
 
 export async function getPlayerState(
-  sql: postgres.Sql,
+  sql: postgres.Sql | postgres.TransactionSql,
   userId: string,
 ): Promise<PlayerState | null> {
   const [r] = await sql<{ player_playlist_id: string | null; scopes: string }[]>`
@@ -15,7 +15,7 @@ export async function getPlayerState(
 }
 
 export async function setPlayerPlaylistId(
-  sql: postgres.Sql,
+  sql: postgres.Sql | postgres.TransactionSql,
   userId: string,
   playlistId: string,
 ): Promise<void> {

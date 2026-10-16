@@ -51,22 +51,28 @@ export async function performPlay(
 ): Promise<void> {
   const progress = progressWriter(sql, userId, runId);
   try {
-    const player = await getPlayerState(sql, userId);
-    if (!player) throw new Error("user missing");
     const { uris } = await readAndBuild(sql, userId, mixId, runId, client, progress);
 
     await updateRun(sql, userId, runId, { phase: "writing", done: 0, total: uris.length });
-    const result = await writeTarget(client, {
-      targetPlaylistId: player.playerPlaylistId,
-      defaultName: PLAYER_PLAYLIST_NAME,
-      description: PLAYER_PLAYLIST_DESCRIPTION,
-      uris,
-      onProgress: (done, total) => progress.push({ done, total }),
+    // Per-user lock: concurrent Plays can't create two Player playlists, and their
+    // writes to the one playlist don't interleave (ADR-0021).
+    const { player, result } = await sql.begin(async (tx) => {
+      await tx`select pg_advisory_xact_lock(hashtextextended(${`player:${userId}`}, 0))`;
+      const state = await getPlayerState(tx, userId);
+      if (!state) throw new Error("user missing");
+      const written = await writeTarget(client, {
+        targetPlaylistId: state.playerPlaylistId,
+        defaultName: PLAYER_PLAYLIST_NAME,
+        description: PLAYER_PLAYLIST_DESCRIPTION,
+        uris,
+        onProgress: (done, total) => progress.push({ done, total }),
+      });
+      if (written.playlistId !== state.playerPlaylistId) {
+        await setPlayerPlaylistId(tx, userId, written.playlistId);
+      }
+      return { player: state, result: written };
     });
     await progress.flush();
-    if (result.playlistId !== player.playerPlaylistId) {
-      await setPlayerPlaylistId(sql, userId, result.playlistId);
-    }
 
     const playback = await startRemote(
       client,

@@ -181,6 +181,35 @@ describe.skipIf(!reachable)("performPlay", () => {
     for (const c of calls("PUT", "/me/player/play")) expect(c.json).not.toHaveProperty("uris");
   });
 
+  it("concurrent Plays on two mixes create only one Player playlist", async () => {
+    const otherMix = (
+      await createMix(
+        sql,
+        FAKE_ME,
+        { name: "Run", source: { type: "liked", id: null, name: "Liked Songs" } },
+        2,
+      )
+    ).id;
+    // Slow create: without the lock both Plays would see no id and create one each.
+    let created = 0;
+    fake.on("POST", /\/me\/playlists$/, async () => {
+      created += 1;
+      await new Promise((r) => setTimeout(r, 100));
+      return { status: 201, body: { id: `slow-${created}` } };
+    });
+    const start = async (id: string) => {
+      const s = await startRun(sql, FAKE_ME, id, "play");
+      if (!s.ok) throw new Error(s.reason);
+      await performPlay(sql, FAKE_ME, id, s.run.id, client(), { checkDelayMs: 0 });
+      return (await getRun(sql, FAKE_ME, id, s.run.id))!;
+    };
+    const [a, b] = await Promise.all([start(mixId), start(otherMix)]);
+    expect(created).toBe(1);
+    expect(a.playlistId).toBe("slow-1");
+    expect(b.playlistId).toBe("slow-1");
+    expect(await playerId()).toBe("slow-1");
+  });
+
   it("a failed write fails the run like Save", async () => {
     fake.on("PUT", /\/playlists\/[^/]+\/items$/, () => ({ status: 500, body: {} }));
     const run = await play();
