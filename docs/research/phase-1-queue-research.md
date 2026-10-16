@@ -66,3 +66,7 @@ Not run. It would need decrypting the stored refresh token outside the app, and 
 11. "Is this SDK still maintained?": https://github.com/spotify/android-sdk/issues/340
 12. Feb 2026 developer access update (Premium, 5 users, 1 client ID): https://developer.spotify.com/blog/2026-02-06-update-on-developer-access-and-platform-security
 13. Feb 2026 changelog: https://developer.spotify.com/documentation/web-api/references/changes/february-2026 ; migration guide: https://developer.spotify.com/documentation/web-api/tutorials/february-2026-migration-guide
+
+## Live test results
+
+2026-10-16, about 23:00 IST: **blocked, not run.** The local user's stored grant only has the scopes `playlist-read-private playlist-read-collaborative user-library-read playlist-modify-private`. The player endpoints need `user-read-playback-state` (devices, queue, currently-playing) and `user-modify-playback-state` (shuffle, play, next, queue, pause). A refresh token can't gain new scopes, so we need a fresh consent first. To unblock: add both scopes to `SCOPES` in `packages/spotify/src/config.ts`, log in again on the local app, then run the test. No Spotify calls were made and playback was not touched.
