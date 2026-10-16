@@ -11,7 +11,7 @@ Phase 1 research (docs/research/phase-1-queue-research.md) found the Web API can
 - Each user has exactly one private Spotify playlist named `rulemix player`, description `Managed by rulemix. Play with shuffle off.` Spotify has no hidden playlists; private is the closest.
 - Its id is stored per user (`users.player_playlist_id`). If it's null, or the playlist is no longer in the user's library (same check as ADR-0016), Play creates a new one and stores the id. Otherwise Play overwrites its items.
 - Every Mix writes into the same Player playlist; the last Play wins.
-- Lookup, create-if-missing, overwrite and storing the id happen under a per-user Postgres advisory transaction lock, so concurrent Plays can't create two Player playlists or interleave their writes (Nishchay, 2026-10-17).
+- Lookup, create-if-missing, overwrite and storing the id happen under a per-user Postgres advisory transaction lock, so concurrent Plays can't create two Player playlists or interleave their writes (Nishchay, 2026-10-17). The transaction sets `lock_timeout = 60s` so a stuck waiter fails cleanly, and Play skips remote play if its run is no longer `running` when the write finishes.
 - Save to Spotify and the per-Mix Target playlist (ADR-0015) stay as an optional secondary action.
 
 ## Consequences

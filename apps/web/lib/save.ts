@@ -22,7 +22,9 @@ export function progressWriter(sql: postgres.Sql, userId: string, runId: string)
   return {
     push(patch: RunPatch): void {
       chain = chain
-        .then(() => updateRun(sql, userId, runId, patch))
+        .then(async () => {
+          await updateRun(sql, userId, runId, patch);
+        })
         .catch((e: unknown) => {
           console.error("[save] progress update failed", {
             runId,

@@ -210,6 +210,48 @@ describe.skipIf(!reachable)("performPlay", () => {
     expect(await playerId()).toBe("slow-1");
   });
 
+  it("skips remote play when the run was marked failed (stale) during the write", async () => {
+    await grantPlayback();
+    devices([{ id: "d1", is_active: true }]);
+    remote(true);
+    const s = await startRun(sql, FAKE_ME, mixId, "play");
+    if (!s.ok) throw new Error(s.reason);
+    fake.on("PUT", /\/playlists\/[^/]+\/items$/, async () => {
+      // What failStaleRuns does when the poller sees no heartbeat for 5 minutes.
+      await sql`update save_runs set status = 'failed', error = 'stale' where id = ${s.run.id}`;
+      return { body: { snapshot_id: "snap-x" } };
+    });
+    await performPlay(sql, FAKE_ME, mixId, s.run.id, client(), { checkDelayMs: 0 });
+    expect(calls("PUT", "/me/player/play")).toHaveLength(0);
+    expect(fake.calls.some((c) => c.path.includes("/me/player"))).toBe(false);
+    expect(await getRun(sql, FAKE_ME, mixId, s.run.id)).toMatchObject({
+      status: "failed",
+      playback: null,
+    });
+  });
+
+  it("fails cleanly when the per-user lock can't be taken within the lock timeout", async () => {
+    const holder = await sql.reserve();
+    try {
+      await holder`begin`;
+      await holder`select pg_advisory_xact_lock(hashtextextended(${`player:${FAKE_ME}`}, 0))`;
+      const s = await startRun(sql, FAKE_ME, mixId, "play");
+      if (!s.ok) throw new Error(s.reason);
+      await performPlay(sql, FAKE_ME, mixId, s.run.id, client(), {
+        checkDelayMs: 0,
+        lockTimeoutMs: 200,
+      });
+      expect(await getRun(sql, FAKE_ME, mixId, s.run.id)).toMatchObject({
+        status: "failed",
+        error: "Couldn't create the playlist. Check your connection and retry.",
+      });
+      expect(calls("POST", "/me/playlists")).toHaveLength(0);
+    } finally {
+      await holder`rollback`;
+      holder.release();
+    }
+  });
+
   it("a failed write fails the run like Save", async () => {
     fake.on("PUT", /\/playlists\/[^/]+\/items$/, () => ({ status: 500, body: {} }));
     const run = await play();

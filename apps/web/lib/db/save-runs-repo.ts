@@ -129,12 +129,13 @@ export async function getRunningRun(
   return r ? toRow(r) : null;
 }
 
+/** Patches a running run; returns false if it is no longer running (finished or marked stale). */
 export async function updateRun(
   sql: postgres.Sql,
   userId: string,
   id: string,
   patch: RunPatch,
-): Promise<void> {
+): Promise<boolean> {
   const set: Record<string, string | number | boolean | null> = {};
   if (patch.phase !== undefined) set.phase = patch.phase;
   if (patch.done !== undefined) set.done = patch.done;
@@ -145,12 +146,13 @@ export async function updateRun(
   if (patch.playback !== undefined) set.playback = patch.playback;
   if (patch.playlistId !== undefined) set.playlist_id = patch.playlistId;
   const cols = Object.keys(set);
-  if (cols.length === 0) return;
+  if (cols.length === 0) return false;
   // Bumps the heartbeat; finished runs are left alone.
-  await sql`
+  const r = await sql`
     update save_runs sr set ${sql(set, cols)}, updated_at = now()
     from mixes m
     where sr.id = ${id} and sr.status = 'running' and m.id = sr.mix_id and m.user_id = ${userId}`;
+  return r.count > 0;
 }
 
 export async function finishRun(

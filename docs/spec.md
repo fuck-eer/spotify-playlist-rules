@@ -358,7 +358,7 @@ A primary **Play** button on the Mix page. It writes the Mix's order into my one
   - a primary "Open in Spotify" link: a real `<a href="https://open.spotify.com/playlist/<id>" target="_blank" rel="noopener noreferrer">` the user taps. A tap is a user gesture, so phones hand off to the Spotify app; navigating after the poll would not be.
 
   With `canAutoPlay` false, the bar shows "Log in again to enable auto-play" linking to `/api/auth/login`. A failed Play shows the error toast with Retry (re-runs Play).
-- **Per-user lock:** the Player playlist lookup, create-if-missing, overwrite and id store run inside one transaction holding `pg_advisory_xact_lock(hashtextextended('player:<userId>', 0))`. Concurrent Plays (different Mixes, same user) can't create two Player playlists, and their writes to it don't interleave; the later one waits and then overwrites.
+- **Per-user lock:** the Player playlist lookup, create-if-missing, overwrite and id store run inside one transaction holding `pg_advisory_xact_lock(hashtextextended('player:<userId>', 0))`. Concurrent Plays (different Mixes, same user) can't create two Player playlists, and their writes to it don't interleave; the later one waits and then overwrites. The transaction sets `lock_timeout` to 60 s first, so a Play stuck behind the lock fails cleanly instead of waiting forever. Before the remote-play step, Play re-checks that its run is still `running` (it may have been marked stale by the 5-minute heartbeat rule); if not, it skips remote play and leaves the run failed.
 - Save's toast, dialog and Open in Spotify link are unchanged.
 
 ### Testing decisions
