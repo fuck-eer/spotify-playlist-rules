@@ -18,7 +18,12 @@ const { sunrise, bassline, echo, drift } = FAKE_TRACKS;
 /** Liked Songs: Sunrise, Bassline, Sunrise again (a duplicate). */
 const LIKED_ITEMS = [{ track: sunrise }, { track: bassline }, { track: sunrise }];
 /** "Gym bangers": Echo, a local file, Drift, Sunrise. */
-const OWN_ITEMS = [{ item: echo }, { is_local: true, item: null }, { item: drift }, { item: sunrise }];
+const OWN_ITEMS = [
+  { item: echo },
+  { is_local: true, item: null },
+  { item: drift },
+  { item: sunrise },
+];
 
 /** A small Spotify library on the fake server: Liked (3), owned (4), collab (9), followed (2). */
 export function installFakeLibrary(fake: FakeSpotify, likedTotal = 3): void {

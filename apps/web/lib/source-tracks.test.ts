@@ -37,15 +37,16 @@ describe.skipIf(!reachable)("readSourceTracks", () => {
   it("refuses a too-large source with 422 before reading its items", async () => {
     process.env.MAX_SOURCE_TRACKS = "2";
     resetEnvCache();
-    const err = await readSourceTracks(sql, spotifyForUser(sql, FAKE_ME), { type: "liked", id: null }).catch(
-      (e: unknown) => e,
-    );
+    const err = await readSourceTracks(sql, spotifyForUser(sql, FAKE_ME), {
+      type: "liked",
+      id: null,
+    }).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(HttpError);
     expect((err as HttpError).status).toBe(422);
     expect((err as HttpError).code).toBe("source_too_large");
-    expect(fake.calls.some((c) => c.path.endsWith("/me/tracks") && c.query.get("limit") !== "1")).toBe(
-      false,
-    );
+    expect(
+      fake.calls.some((c) => c.path.endsWith("/me/tracks") && c.query.get("limit") !== "1"),
+    ).toBe(false);
   });
 
   it("reads playlist items (unavailable as null) and upserts track_cache", async () => {

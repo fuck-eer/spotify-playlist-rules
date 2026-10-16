@@ -20,7 +20,12 @@ describe.skipIf(!reachable)("mix rules repo", () => {
     sql = await resetTestDb();
     user = (await insertTestUser(sql)).id;
     mixId = (
-      await createMix(sql, user, { name: "Gym", source: { type: "liked", id: null, name: "Liked Songs" } }, 1)
+      await createMix(
+        sql,
+        user,
+        { name: "Gym", source: { type: "liked", id: null, name: "Liked Songs" } },
+        1,
+      )
     ).id;
     ruleId = (await createRule(sql, user, { kind: "every_n", n: 4 })).id;
   });
@@ -62,7 +67,13 @@ describe.skipIf(!reachable)("mix rules repo", () => {
       code: "archived",
     });
     expect(
-      await addMixRule(sql, user, mixId, { ruleId: "00000000-0000-0000-0000-000000000000", trackUri: T("a") }, 10),
+      await addMixRule(
+        sql,
+        user,
+        mixId,
+        { ruleId: "00000000-0000-0000-0000-000000000000", trackUri: T("a") },
+        10,
+      ),
     ).toEqual({ ok: false, code: "not_found" });
   });
 
@@ -71,7 +82,11 @@ describe.skipIf(!reachable)("mix rules repo", () => {
     const b = await add("b");
     const c = await add("c");
     expect(await reorderMixRules(sql, user, mixId, [c.id, a.id, b.id])).toBe(true);
-    expect((await listMixRules(sql, user, mixId)).map((r) => r.trackUri)).toEqual([T("c"), T("a"), T("b")]);
+    expect((await listMixRules(sql, user, mixId)).map((r) => r.trackUri)).toEqual([
+      T("c"),
+      T("a"),
+      T("b"),
+    ]);
     expect(await reorderMixRules(sql, user, mixId, [a.id, b.id])).toBe(false);
     expect(await reorderMixRules(sql, user, mixId, [a.id, a.id, b.id])).toBe(false);
   });
@@ -93,14 +108,18 @@ describe.skipIf(!reachable)("mix rules repo", () => {
     const other = (await insertTestUser(sql)).id;
     const otherRule = (await createRule(sql, other, { kind: "repeat", n: 2 })).id;
     expect(await listMixRules(sql, other, mixId)).toEqual([]);
-    expect(await addMixRule(sql, other, mixId, { ruleId: otherRule, trackUri: T("x") }, 10)).toEqual({
+    expect(
+      await addMixRule(sql, other, mixId, { ruleId: otherRule, trackUri: T("x") }, 10),
+    ).toEqual({
       ok: false,
       code: "not_found",
     });
-    expect(await addMixRule(sql, user, mixId, { ruleId: otherRule, trackUri: T("x") }, 10)).toEqual({
-      ok: false,
-      code: "not_found",
-    });
+    expect(await addMixRule(sql, user, mixId, { ruleId: otherRule, trackUri: T("x") }, 10)).toEqual(
+      {
+        ok: false,
+        code: "not_found",
+      },
+    );
     expect(await reorderMixRules(sql, other, mixId, [a.id])).toBe(false);
     expect(await removeMixRule(sql, other, mixId, a.id)).toBe(false);
   });

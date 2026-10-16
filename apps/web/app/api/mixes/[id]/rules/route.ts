@@ -51,7 +51,8 @@ export async function POST(req: NextRequest, { params }: Ctx): Promise<Response>
     }
     const res = await addMixRule(sql, user.id, id, body, max);
     if (!res.ok) {
-      if (res.code === "limit") throw new HttpError(409, "rule_limit", `Up to ${max} rules per mix.`);
+      if (res.code === "limit")
+        throw new HttpError(409, "rule_limit", `Up to ${max} rules per mix.`);
       if (res.code === "archived")
         throw new HttpError(422, "rule_archived", "That rule is archived. Restore it first.");
       throw new HttpError(404, "not_found", "That rule or mix doesn't exist.");

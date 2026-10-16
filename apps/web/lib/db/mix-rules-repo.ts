@@ -26,7 +26,15 @@ interface DbRow {
 }
 
 function toRow(r: DbRow): MixRuleRow {
-  return { id: r.id, ruleId: r.rule_id, kind: r.kind, n: r.n, position: r.position, trackUri: r.track_uri, songName: r.song_name };
+  return {
+    id: r.id,
+    ruleId: r.rule_id,
+    kind: r.kind,
+    n: r.n,
+    position: r.position,
+    trackUri: r.track_uri,
+    songName: r.song_name,
+  };
 }
 
 function select(sql: Tx, userId: string, mixId: string) {
@@ -65,10 +73,13 @@ export async function addMixRule(
   mixId: string,
   input: { ruleId: string; trackUri: string },
   maxRules: number,
-): Promise<{ ok: true; row: MixRuleRow } | { ok: false; code: "limit" | "not_found" | "archived" }> {
+): Promise<
+  { ok: true; row: MixRuleRow } | { ok: false; code: "limit" | "not_found" | "archived" }
+> {
   if (!UUID.test(mixId) || !UUID.test(input.ruleId)) return { ok: false, code: "not_found" };
   return sql.begin(async (tx) => {
-    if (!(await lockMix(tx, userId, mixId))) return { ok: false as const, code: "not_found" as const };
+    if (!(await lockMix(tx, userId, mixId)))
+      return { ok: false as const, code: "not_found" as const };
     const [rule] = await tx<{ archived_at: Date | null }[]>`
       select archived_at from rules where id = ${input.ruleId} and user_id = ${userId}`;
     if (!rule) return { ok: false as const, code: "not_found" as const };
@@ -95,9 +106,9 @@ export async function reorderMixRules(
   if (!UUID.test(mixId)) return false;
   return sql.begin(async (tx) => {
     if (!(await lockMix(tx, userId, mixId))) return false;
-    const current = (await tx<{ id: string }[]>`select id from mix_rules where mix_id = ${mixId}`).map(
-      (r) => r.id,
-    );
+    const current = (
+      await tx<{ id: string }[]>`select id from mix_rules where mix_id = ${mixId}`
+    ).map((r) => r.id);
     const want = new Set(orderedIds);
     if (
       want.size !== orderedIds.length ||

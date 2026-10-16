@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import type { TrackItem } from "@rulemix/spotify";
+import { Reorder } from "motion/react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -20,10 +22,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { MixRuleRow } from "@/lib/db/mix-rules-repo";
 import type { MixRow, MixSource } from "@/lib/db/mixes-repo";
+import type { RuleRow } from "@/lib/db/rules-repo";
 import type { SourceListItem } from "@/lib/sources-types";
 import { CoverTile } from "./cover-tile";
+import { RuleCard } from "./rule-card";
+import { RulePickerSheet, type RulesState } from "./rule-picker-sheet";
 import { RulesIconLink } from "./rules-icon-link";
+import { SongPickerSheet, type SongsState } from "./song-picker-sheet";
 import { SourcePickerSheet, type SourcesState } from "./source-picker-sheet";
 
 interface ApiError {
@@ -38,7 +45,17 @@ async function errorMessage(res: Response): Promise<string> {
   }
 }
 
-export function MixBuilder({ mix }: { mix: MixRow | null }) {
+export function MixBuilder({
+  mix,
+  rules: initialRules = [],
+  maxRules = 10,
+  addRuleId = null,
+}: {
+  mix: MixRow | null;
+  rules?: MixRuleRow[];
+  maxRules?: number;
+  addRuleId?: string | null;
+}) {
   const router = useRouter();
   const [mixId, setMixId] = useState<string | null>(mix?.id ?? null);
   const [name, setName] = useState(mix?.name ?? "");
@@ -48,6 +65,13 @@ export function MixBuilder({ mix }: { mix: MixRow | null }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [rules, setRules] = useState<MixRuleRow[]>(initialRules);
+  const [rulePickerOpen, setRulePickerOpen] = useState(false);
+  const [library, setLibrary] = useState<RulesState>({ status: "idle", rules: [] });
+  const [pendingRuleId, setPendingRuleId] = useState<string | null>(null);
+  const [songs, setSongs] = useState<SongsState>({ status: "idle", songs: [] });
+  const [pendingSource, setPendingSource] = useState<SourceListItem | null>(null);
+  const handledAddRule = useRef(false);
   const [sources, setSources] = useState<SourcesState>({
     status: "idle",
     sources: [],
@@ -104,9 +128,18 @@ export function MixBuilder({ mix }: { mix: MixRow | null }) {
     return res.ok;
   }
 
-  async function onPick(s: SourceListItem): Promise<void> {
+  function onPick(s: SourceListItem): void {
     if (s.tooLarge) return;
     setPickerOpen(false);
+    const changes = !source || source.type !== s.type || source.id !== s.id;
+    if (mixId && changes && rules.length > 0) {
+      setPendingSource(s);
+      return;
+    }
+    void applySource(s);
+  }
+
+  async function applySource(s: SourceListItem): Promise<void> {
     const next: MixSource = { type: s.type, id: s.id, name: s.name };
     const prev = source;
     setSource(next);
@@ -116,8 +149,120 @@ export function MixBuilder({ mix }: { mix: MixRow | null }) {
       if (trimmed) await create(trimmed, next);
       return;
     }
-    if (!(await patch({ source: { type: next.type, id: next.id } }))) setSource(prev);
+    const changed = !prev || prev.type !== next.type || prev.id !== next.id;
+    if (!(await patch({ source: { type: next.type, id: next.id } }))) {
+      setSource(prev);
+      return;
+    }
+    if (changed) {
+      setRules([]);
+      setSongs({ status: "idle", songs: [] });
+    }
   }
+
+  async function loadLibrary(): Promise<void> {
+    setLibrary((l) => ({ ...l, status: "loading" }));
+    try {
+      const res = await fetch("/api/rules");
+      if (!res.ok) throw new Error(await errorMessage(res));
+      setLibrary({ status: "ready", rules: ((await res.json()) as { rules: RuleRow[] }).rules });
+    } catch {
+      setLibrary((l) => ({ ...l, status: "error" }));
+    }
+  }
+
+  async function loadSongs(id: string): Promise<void> {
+    setSongs((x) => ({ ...x, status: "loading" }));
+    const res = await fetch(`/api/mixes/${id}/songs`);
+    if (!res.ok) {
+      setSongs({ status: "error", songs: [], error: await errorMessage(res) });
+      return;
+    }
+    setSongs({ status: "ready", songs: ((await res.json()) as { songs: TrackItem[] }).songs });
+  }
+
+  function openSongPicker(ruleId: string): void {
+    if (!mixId) return;
+    setPendingRuleId(ruleId);
+    if (songs.status !== "ready") void loadSongs(mixId);
+  }
+
+  function openRulePicker(): void {
+    setRulePickerOpen(true);
+    if (library.status !== "ready") void loadLibrary();
+  }
+
+  async function onPickSong(t: TrackItem): Promise<void> {
+    const ruleId = pendingRuleId;
+    setPendingRuleId(null);
+    if (!mixId || !ruleId) return;
+    const res = await fetch(`/api/mixes/${mixId}/rules`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ruleId, trackUri: t.uri }),
+    });
+    if (!res.ok) {
+      toast.error(await errorMessage(res));
+      return;
+    }
+    const { rule } = (await res.json()) as { rule: MixRuleRow };
+    setRules((rs) => [...rs, { ...rule, songName: rule.songName ?? t.name }]);
+  }
+
+  async function saveOrder(next: MixRuleRow[], prev: MixRuleRow[]): Promise<void> {
+    if (!mixId) return;
+    const res = await fetch(`/api/mixes/${mixId}/rules/order`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ids: next.map((r) => r.id) }),
+    });
+    if (!res.ok) {
+      setRules(prev);
+      toast.error(await errorMessage(res));
+    }
+  }
+
+  const dragStart = useRef<MixRuleRow[] | null>(null);
+  function onReorder(next: MixRuleRow[]): void {
+    dragStart.current ??= rules;
+    setRules(next);
+  }
+  function onDragEnd(): void {
+    const prev = dragStart.current;
+    dragStart.current = null;
+    if (!prev || prev.map((r) => r.id).join() === rules.map((r) => r.id).join()) return;
+    void saveOrder(rules, prev);
+  }
+
+  function onMove(r: MixRuleRow, delta: -1 | 1): void {
+    const i = rules.findIndex((x) => x.id === r.id);
+    const j = i + delta;
+    if (i < 0 || j < 0 || j >= rules.length) return;
+    const next = [...rules];
+    [next[i], next[j]] = [next[j]!, next[i]!];
+    setRules(next);
+    void saveOrder(next, rules);
+  }
+
+  async function onRemove(r: MixRuleRow): Promise<void> {
+    if (!mixId) return;
+    const prev = rules;
+    setRules(rules.filter((x) => x.id !== r.id));
+    const res = await fetch(`/api/mixes/${mixId}/rules/${r.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      setRules(prev);
+      toast.error(await errorMessage(res));
+    }
+  }
+
+  useEffect(() => {
+    if (!addRuleId || !mixId || handledAddRule.current) return;
+    handledAddRule.current = true;
+    openSongPicker(addRuleId);
+    router.replace(`/mixes/${mixId}`);
+    // Runs once for the ?addRule handoff from the rule editor.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addRuleId, mixId]);
 
   async function onNameBlur(): Promise<void> {
     const trimmed = name.trim();
@@ -222,15 +367,88 @@ export function MixBuilder({ mix }: { mix: MixRow | null }) {
         <div className="mb-2 mt-5 font-mono text-[11px] font-semibold tracking-[.12em] text-mut">
           RULES
         </div>
-        {/* Ticket 10 fills the Rule Set here. */}
-        <div data-testid="rules-placeholder" />
+        {rules.length === 0 ? (
+          <p className="py-2 text-sm text-mut">No rules yet. Without one, you just get a copy.</p>
+        ) : (
+          <Reorder.Group axis="y" values={rules} onReorder={onReorder} className="relative">
+            {rules.map((r, i) => (
+              <RuleCard
+                key={r.id}
+                rule={r}
+                index={i}
+                onRemove={(x) => void onRemove(x)}
+                onMove={onMove}
+                onDragEnd={onDragEnd}
+              />
+            ))}
+          </Reorder.Group>
+        )}
+        {mixId ? (
+          rules.length >= maxRules ? (
+            <p className="mt-1.5 text-xs text-dim">Up to {maxRules} rules per mix.</p>
+          ) : (
+            <button
+              type="button"
+              onClick={openRulePicker}
+              className="mt-1 w-full rounded-lg border border-dashed border-[#444] p-3 font-semibold text-mut"
+            >
+              + Add rule
+            </button>
+          )
+        ) : null}
+        <p className="mt-1.5 text-xs text-dim">Drag to reorder. The top rule wins a conflict.</p>
       </div>
       <SourcePickerSheet
         open={pickerOpen}
         onOpenChange={setPickerOpen}
         state={sources}
-        onPick={(s) => void onPick(s)}
+        onPick={onPick}
       />
+      {mixId ? (
+        <RulePickerSheet
+          open={rulePickerOpen}
+          onOpenChange={setRulePickerOpen}
+          state={library}
+          mixId={mixId}
+          onPick={(r) => {
+            setRulePickerOpen(false);
+            openSongPicker(r.id);
+          }}
+        />
+      ) : null}
+      <SongPickerSheet
+        open={pendingRuleId !== null}
+        onOpenChange={(o) => {
+          if (!o) setPendingRuleId(null);
+        }}
+        state={songs}
+        onPick={(t) => void onPickSong(t)}
+      />
+      <AlertDialog
+        open={pendingSource !== null}
+        onOpenChange={(o) => {
+          if (!o) setPendingSource(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change source?</AlertDialogTitle>
+            <AlertDialogDescription>This clears the rules in this mix.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Not now</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const s = pendingSource;
+                setPendingSource(null);
+                if (s) void applySource(s);
+              }}
+            >
+              Change
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>

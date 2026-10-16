@@ -34,7 +34,12 @@ describe.skipIf(!reachable)("mix rules routes", () => {
     process.env.MAX_RULES_PER_MIX = "10";
     resetEnvCache();
     mixId = (
-      await createMix(sql, FAKE_ME, { name: "Gym", source: { type: "playlist", id: "pl-own", name: "Gym bangers" } }, 1)
+      await createMix(
+        sql,
+        FAKE_ME,
+        { name: "Gym", source: { type: "playlist", id: "pl-own", name: "Gym bangers" } },
+        1,
+      )
     ).id;
     ruleId = (await createRule(sql, FAKE_ME, { kind: "repeat", n: 3 })).id;
   });
@@ -65,7 +70,14 @@ describe.skipIf(!reachable)("mix rules routes", () => {
     const body = (await list.json()) as { rules: MixRuleRow[]; maxRules: number };
     expect(body.maxRules).toBe(10);
     expect(body.rules).toMatchObject([
-      { ruleId, kind: "repeat", n: 3, position: 0, trackUri: "spotify:track:drift", songName: "Drift" },
+      {
+        ruleId,
+        kind: "repeat",
+        n: 3,
+        position: 0,
+        trackUri: "spotify:track:drift",
+        songName: "Drift",
+      },
     ]);
   });
 
@@ -93,17 +105,31 @@ describe.skipIf(!reachable)("mix rules routes", () => {
     expect(await errCode(res)).toBe("rule_archived");
     const missing = "00000000-0000-0000-0000-000000000000";
     const r404 = await addRule(
-      req(`/api/mixes/${missing}/rules`, cookie, { method: "POST", body: { ruleId, trackUri: "spotify:track:echo" } }),
+      req(`/api/mixes/${missing}/rules`, cookie, {
+        method: "POST",
+        body: { ruleId, trackUri: "spotify:track:echo" },
+      }),
       ctx({ id: missing }),
     );
     expect(r404.status).toBe(404);
   });
 
   it("reorders with 204, rejects a bad order with 400, and deletes with 204", async () => {
-    const a = ((await (await post({ ruleId, trackUri: "spotify:track:echo" })).json()) as { rule: MixRuleRow }).rule;
-    const b = ((await (await post({ ruleId, trackUri: "spotify:track:drift" })).json()) as { rule: MixRuleRow }).rule;
+    const a = (
+      (await (await post({ ruleId, trackUri: "spotify:track:echo" })).json()) as {
+        rule: MixRuleRow;
+      }
+    ).rule;
+    const b = (
+      (await (await post({ ruleId, trackUri: "spotify:track:drift" })).json()) as {
+        rule: MixRuleRow;
+      }
+    ).rule;
     const put = (ids: unknown) =>
-      putOrder(req(`/api/mixes/${mixId}/rules/order`, cookie, { method: "PUT", body: { ids } }), ctx({ id: mixId }));
+      putOrder(
+        req(`/api/mixes/${mixId}/rules/order`, cookie, { method: "PUT", body: { ids } }),
+        ctx({ id: mixId }),
+      );
     expect((await put([b.id, a.id])).status).toBe(204);
     const bad = await put([a.id]);
     expect(bad.status).toBe(400);
@@ -113,7 +139,9 @@ describe.skipIf(!reachable)("mix rules routes", () => {
       ctx({ id: mixId, mixRuleId: b.id }),
     );
     expect(del.status).toBe(204);
-    const list = (await (await listRules(req(`/api/mixes/${mixId}/rules`, cookie), ctx({ id: mixId }))).json()) as {
+    const list = (await (
+      await listRules(req(`/api/mixes/${mixId}/rules`, cookie), ctx({ id: mixId }))
+    ).json()) as {
       rules: MixRuleRow[];
     };
     expect(list.rules.map((r) => [r.id, r.position])).toEqual([[a.id, 0]]);

@@ -1,6 +1,6 @@
 # 10: Rule Set in a Mix: add (rule → song), reorder, remove, limit
 
-**Status:** ready-for-agent
+**Status:** done
 **Type:** task
 **Blocked by:** 08, 09
 **Glossary terms:** Rule Set, Rule, Mix, Source playlist
@@ -60,6 +60,15 @@ In the Mix builder, "+ Add rule" opens a rule picker (non-archived rules from th
   - keyboard reorder calls PUT with the new order.
 
 ## Acceptance criteria
-- [ ] Each rule in a Mix gets its song from the Mix's Source; the same Rule can carry different songs in different Mixes
-- [ ] Colour follows position (index 0 → R1)
-- [ ] All tests pass
+- [x] Each rule in a Mix gets its song from the Mix's Source; the same Rule can carry different songs in different Mixes
+- [x] Colour follows position (index 0 → R1)
+- [x] All tests pass
+
+## Notes (implementation)
+- `readSourceTracks(sql, client, source, onProgress?)` takes `sql` first, because it upserts `track_cache`.
+- `MixRuleRow` also carries `songName` (left join on `track_cache`; null until the Source was read). Cards show "Unknown song" if null.
+- POST `/api/mixes/[id]/rules` returns 201 `{ rule }`. Other new copy: "That song isn't in this mix's source.", "That rule is archived. Restore it first.", "The rules changed. Reload and try again.", "Couldn't load your rules. Try again.", "Couldn't load the songs. Try again.", search placeholder "Search songs", rule-picker title "Add a rule" (from mockup).
+- Adding/reordering/removing rules bumps `mixes.updated_at`.
+- Keyboard reorder: ↑/↓ on the focused handle (aria-label "Reorder #NN").
+- Mix builder now confirms a source change when the Mix has rules: "Change source?" / "This clears the rules in this mix." (Not now / Change). Closes t09 deviation 5.
+- Fake library (`lib/testing/fake-library.ts`) now serves Liked and "Gym bangers" items for tests and e2e.
