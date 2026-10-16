@@ -75,11 +75,11 @@ describe.skipIf(!reachable)("computePreview", () => {
     expect(p.skippedText).toBeNull();
     await addRule("pin_first", null, T("c"));
     p = await preview();
-    expect(p.summary).toBe("4 tracks · 1 rule applied");
+    expect(p.summary).toBe("5 tracks · 1 rule applied"); // v2: the copy is added, the Original stays
     expect(p.kinds).toEqual(["pin_first"]);
     expect(p.names[T("c")]).toBe("C");
     await addRule("repeat", 2, T("a"));
-    expect((await preview()).summary).toBe("5 tracks · 2 rules applied");
+    expect((await preview()).summary).toBe("6 tracks · 2 rules applied");
   });
 
   it("counts unavailable songs", async () => {
@@ -93,7 +93,7 @@ describe.skipIf(!reachable)("computePreview", () => {
     serve(["a", "b", "c"]);
     await addRule("pin_first", null, T("c"));
     serve(["a", "b"]);
-    expect((await preview()).issues).toEqual([{ kind: "unavailable_rule_song", ruleIndex: 0 }]);
+    expect((await preview()).issues).toEqual([{ kind: "rule_song_not_in_source", ruleIndex: 0 }]);
   });
 
   it("keeps source order when asked, and is deterministic for one seed", async () => {
@@ -107,13 +107,13 @@ describe.skipIf(!reachable)("computePreview", () => {
     expect((await preview()).slots).toEqual(one);
   });
 
-  it("shifts a conflicting repeat after a pin on the same song", async () => {
+  it("v2: a pin adds a copy and the Original stays; a repeat stacks on its Original", async () => {
     serve(["a", "b", "c"]);
     await updateMix(sql, FAKE_ME, mixId, { keepSourceOrder: true });
     await addRule("pin_first", null, T("b"));
     await addRule("repeat", 2, T("a"));
     const { slots } = await preview();
-    expect(slots.some((s) => s.shiftedFrom === 0)).toBe(true);
+    expect(slots.map((s) => s.uri)).toEqual(["b", "a", "a", "b", "c"].map(T));
     expect(slots[0]).toEqual({ uri: T("b"), ruleIndex: 0, ruleIndices: [0], shiftedFrom: null });
   });
 });

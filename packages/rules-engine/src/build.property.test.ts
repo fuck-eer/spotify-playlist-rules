@@ -5,7 +5,6 @@ import type { BuildInput, MixRuleInput, SourceItem } from "./types.js";
 
 const RUNS = { numRuns: 200 };
 
-// Small id pool so duplicates are common; a few invalid uris and nulls.
 const itemArb: fc.Arbitrary<SourceItem> = fc.oneof(
   {
     weight: 8,
@@ -22,126 +21,96 @@ const itemArb: fc.Arbitrary<SourceItem> = fc.oneof(
   },
 );
 
-const ruleArb = (uris: string[]): fc.Arbitrary<MixRuleInput> =>
+const ruleArb = (uris: string[]): fc.Arbitrary<Omit<MixRuleInput, "id">> =>
   fc.oneof(
-    fc.constantFrom(...uris).map((uri): MixRuleInput => ({ kind: "pin_first", uri, n: null })),
+    fc.record({
+      kind: fc.constant("pin_first" as const),
+      uri: fc.constantFrom(...uris),
+      n: fc.constant(null),
+      removedPlays: fc.constant(0),
+      deletedCopies: fc.array(fc.integer({ min: 0, max: 3 }), { maxLength: 2 }),
+    }),
+    fc.record({
+      kind: fc.constant("every_n" as const),
+      uri: fc.constantFrom(...uris),
+      n: fc.integer({ min: 2, max: 10 }),
+      removedPlays: fc.constant(0),
+      deletedCopies: fc.array(fc.integer({ min: 0, max: 20 }), { maxLength: 4 }),
+    }),
     fc
-      .tuple(
-        fc.constantFrom(...uris),
-        fc.constantFrom("every_n" as const, "repeat" as const),
-        fc.integer({ min: 2, max: 10 }),
-      )
-      .map(([uri, kind, n]): MixRuleInput => ({ kind, uri, n })),
+      .tuple(fc.constantFrom(...uris), fc.integer({ min: 2, max: 10 }), fc.nat())
+      .map(([uri, n, r]) => ({
+        kind: "repeat" as const,
+        uri,
+        n,
+        removedPlays: r % n,
+        deletedCopies: [],
+      })),
   );
 
-const inputArb = (maxRules: number): fc.Arbitrary<BuildInput> =>
-  fc.array(itemArb, { minLength: 0, maxLength: 600 }).chain((source) => {
-    const uris = source.flatMap((s) => (s === null ? [] : [s.uri]));
-    const rules =
-      uris.length === 0 ? fc.constant([]) : fc.array(ruleArb(uris), { maxLength: maxRules });
-    return fc.record({
-      source: fc.constant(source),
-      rules,
-      keepSourceOrder: fc.boolean(),
-      seed: fc.integer({ min: 0, max: 2 ** 32 - 1 }),
-    });
+const inputArb: fc.Arbitrary<BuildInput> = fc.array(itemArb, { maxLength: 600 }).chain((source) => {
+  const uris = [
+    ...new Set([...source.flatMap((s) => (s === null ? [] : [s.uri])), "spotify:track:GONE"]),
+  ];
+  return fc.record({
+    source: fc.constant(source),
+    rules: fc
+      .array(ruleArb(uris), { maxLength: 10 })
+      .map((rs) => rs.map((r, i) => ({ ...r, id: `m${i}` }))),
+    keepSourceOrder: fc.boolean(),
+    seed: fc.integer({ min: 0, max: 2 ** 32 - 1 }),
+    manualOrder: fc.option(fc.shuffledSubarray(uris), { nil: null }),
+    bench: fc.subarray(uris, { maxLength: Math.min(5, uris.length) }),
   });
-
-const isTrack = (s: SourceItem): s is NonNullable<SourceItem> =>
-  s !== null && s.uri.startsWith("spotify:track:");
-const tally = (xs: string[]): Map<string, number> => {
-  const m = new Map<string, number>();
-  for (const x of xs) m.set(x, (m.get(x) ?? 0) + 1);
-  return m;
-};
+});
 
 describe("build properties", () => {
-  it("uris.length equals stats.total", () => {
+  it("uris.length = stats.total = sum of node plays; firstSlot is consistent", () => {
     fc.assert(
-      fc.property(inputArb(10), (input) => {
+      fc.property(inputArb, (input) => {
         const r = build(input);
-        expect(r.uris).toHaveLength(r.stats.total);
-        expect(r.preview).toHaveLength(r.stats.total);
-      }),
-      RUNS,
-    );
-  });
-
-  it("preserves the base multiset exactly once", () => {
-    fc.assert(
-      fc.property(inputArb(10), (input) => {
-        const r = build(input);
-        const available = input.source.filter(isTrack).map((s) => s.uri);
-        const ruleUris = new Set(
-          input.rules.map((x) => x.uri).filter((u) => available.includes(u)),
-        );
-        const expected = tally(available.filter((u) => !ruleUris.has(u)));
-        const actual = tally(r.preview.filter((s) => s.ruleIndex === null).map((s) => s.uri));
-        expect(actual).toEqual(expected);
-      }),
-      RUNS,
-    );
-  });
-
-  it("each active rule places exactly its count", () => {
-    fc.assert(
-      fc.property(inputArb(10), (input) => {
-        const r = build(input);
-        const available = input.source.filter(isTrack).map((s) => s.uri);
-        const ruleUris = new Set(
-          input.rules.map((x) => x.uri).filter((u) => available.includes(u)),
-        );
-        const b = available.filter((u) => !ruleUris.has(u)).length;
-        input.rules.forEach((rule, i) => {
-          const placed = r.preview.filter((s) => s.ruleIndices.includes(i));
-          const expected = !available.includes(rule.uri)
-            ? 0
-            : rule.kind === "pin_first"
-              ? 1
-              : rule.kind === "repeat"
-                ? (rule.n ?? 0)
-                : Math.max(1, Math.floor(b / (rule.n ?? 1)));
-          expect(placed).toHaveLength(expected);
-          expect(placed.every((s) => s.uri === rule.uri)).toBe(true);
-        });
-      }),
-      RUNS,
-    );
-  });
-
-  it("every_n places at least one copy even for tiny sources (B in 0..n)", () => {
-    fc.assert(
-      fc.property(fc.integer({ min: 0, max: 12 }), fc.integer({ min: 2, max: 10 }), (b, n) => {
-        const source: SourceItem[] = [
-          ...Array.from({ length: b }, (_, i) => ({
-            uri: `spotify:track:B${i}`,
-            name: "b",
-            artists: [],
-          })),
-          { uri: "spotify:track:X", name: "x", artists: [] },
-        ];
-        const r = build({
-          source,
-          rules: [{ kind: "every_n", uri: "spotify:track:X", n }],
-          keepSourceOrder: true,
-          seed: 0,
-        });
-        expect(r.uris.filter((u) => u === "spotify:track:X")).toHaveLength(
-          Math.max(1, Math.floor(b / n)),
-        );
-        expect(r.uris).toHaveLength(b + Math.max(1, Math.floor(b / n)));
-      }),
-      RUNS,
-    );
-  });
-
-  it("ruleIndex is the first of ruleIndices, and merged slots share one song", () => {
-    fc.assert(
-      fc.property(inputArb(10), (input) => {
-        for (const s of build(input).preview) {
-          expect(s.ruleIndex).toBe(s.ruleIndices[0] ?? null);
-          for (const i of s.ruleIndices) expect(input.rules[i]?.uri).toBe(s.uri);
+        const sum = r.nodes.reduce((s, n) => s + n.plays, 0);
+        expect(r.uris).toHaveLength(sum);
+        expect(r.stats.total).toBe(sum);
+        let slot = 0;
+        for (const n of r.nodes) {
+          expect(n.firstSlot).toBe(slot);
+          slot += n.plays;
         }
+      }),
+      RUNS,
+    );
+  });
+
+  it("no benched URI appears as an Original node", () => {
+    fc.assert(
+      fc.property(inputArb, (input) => {
+        const bench = new Set(input.bench);
+        for (const n of build(input).nodes) {
+          if (n.role === "original") expect(bench.has(n.uri)).toBe(false);
+        }
+      }),
+      RUNS,
+    );
+  });
+
+  it("no node matches a deleted copy", () => {
+    fc.assert(
+      fc.property(inputArb, (input) => {
+        const deleted = new Set(
+          input.rules.flatMap((r) => r.deletedCopies.map((c) => `r:${r.id}:${c}`)),
+        );
+        for (const n of build(input).nodes) expect(deleted.has(n.key)).toBe(false);
+      }),
+      RUNS,
+    );
+  });
+
+  it("every Original appears once and keys are unique", () => {
+    fc.assert(
+      fc.property(inputArb, (input) => {
+        const keys = build(input).nodes.map((n) => n.key);
+        expect(new Set(keys).size).toBe(keys.length);
       }),
       RUNS,
     );
@@ -149,37 +118,8 @@ describe("build properties", () => {
 
   it("is deterministic", () => {
     fc.assert(
-      fc.property(inputArb(10), (input) => {
-        expect(build(input)).toEqual(build(input));
-      }),
-      RUNS,
-    );
-  });
-
-  it("only rule slots can be shifted", () => {
-    fc.assert(
-      fc.property(inputArb(10), (input) => {
-        for (const s of build(input).preview)
-          if (s.shiftedFrom !== null) expect(s.ruleIndex).not.toBeNull();
-      }),
-      RUNS,
-    );
-  });
-
-  it("a single rule never shifts", () => {
-    fc.assert(
-      fc.property(inputArb(1), (input) => {
-        expect(build(input).preview.every((s) => s.shiftedFrom === null)).toBe(true);
-      }),
-      RUNS,
-    );
-  });
-
-  it("skippedUnavailable counts nulls and non-track uris", () => {
-    fc.assert(
-      fc.property(inputArb(10), (input) => {
-        const expected = input.source.filter((s) => !isTrack(s)).length;
-        expect(build(input).stats.skippedUnavailable).toBe(expected);
+      fc.property(inputArb, (input) => {
+        expect(build(input)).toEqual(build(structuredClone(input)));
       }),
       RUNS,
     );

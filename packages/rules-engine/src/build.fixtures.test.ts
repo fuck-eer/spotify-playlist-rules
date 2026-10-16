@@ -16,12 +16,15 @@ declare global {
 }
 
 // Loaded through Vite's import.meta.glob so src/ stays free of Node APIs.
-const modules = import.meta.glob<Fixture>("../fixtures/*.json", { eager: true, import: "default" });
+const modules = import.meta.glob<Fixture>("../fixtures/[0-9]*.json", {
+  eager: true,
+  import: "default",
+});
 const files = Object.keys(modules).sort();
 
 describe("shared fixtures", () => {
-  it("has all 14 fixtures", () => {
-    expect(files).toHaveLength(14);
+  it("has all 24 fixtures", () => {
+    expect(files).toHaveLength(24);
   });
 
   it.each(files)("%s", (file) => {

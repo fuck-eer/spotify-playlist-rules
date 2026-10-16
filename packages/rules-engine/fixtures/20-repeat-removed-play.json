@@ -1,0 +1,81 @@
+{
+  "name": "Repeat x3 with one play deleted plays twice",
+  "input": {
+    "keepSourceOrder": true,
+    "seed": 0,
+    "manualOrder": null,
+    "bench": [],
+    "source": [
+      {
+        "uri": "spotify:track:T01",
+        "name": "Song 01",
+        "artists": ["Artist"]
+      },
+      {
+        "uri": "spotify:track:T02",
+        "name": "Song 02",
+        "artists": ["Artist"]
+      },
+      {
+        "uri": "spotify:track:T03",
+        "name": "Song 03",
+        "artists": ["Artist"]
+      }
+    ],
+    "rules": [
+      {
+        "id": "m1",
+        "kind": "repeat",
+        "uri": "spotify:track:T02",
+        "n": 3,
+        "removedPlays": 1,
+        "deletedCopies": []
+      }
+    ]
+  },
+  "expected": {
+    "uris": ["spotify:track:T01", "spotify:track:T02", "spotify:track:T02", "spotify:track:T03"],
+    "nodes": [
+      {
+        "key": "b:spotify:track:T01",
+        "role": "original",
+        "uri": "spotify:track:T01",
+        "plays": 1,
+        "ruleIndex": null,
+        "ruleIndices": [],
+        "shiftedFrom": null,
+        "copyIndex": null,
+        "firstSlot": 0
+      },
+      {
+        "key": "b:spotify:track:T02",
+        "role": "original",
+        "uri": "spotify:track:T02",
+        "plays": 2,
+        "ruleIndex": 0,
+        "ruleIndices": [0],
+        "shiftedFrom": null,
+        "copyIndex": null,
+        "firstSlot": 1
+      },
+      {
+        "key": "b:spotify:track:T03",
+        "role": "original",
+        "uri": "spotify:track:T03",
+        "plays": 1,
+        "ruleIndex": null,
+        "ruleIndices": [],
+        "shiftedFrom": null,
+        "copyIndex": null,
+        "firstSlot": 3
+      }
+    ],
+    "issues": [],
+    "stats": {
+      "total": 4,
+      "rulesApplied": 1,
+      "skippedUnavailable": 0,
+      "benched": 0
+    }
+  }
+}

@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Glossary:** Original song, Rule copy, Manual order, Bench, Source sync, Seed, Insert every N, Pin first (Start with), Repeat N times.
 **ADRs:** 0019, 0020, 0027, 0028, 0029, 0030, 0031.

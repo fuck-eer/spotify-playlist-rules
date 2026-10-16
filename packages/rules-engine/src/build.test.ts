@@ -1,11 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { build } from "./build.js";
-import type { BuildInput, MixRuleInput, SourceItem } from "./types.js";
+import type { BuildInput, MixRuleInput, RuleKind, SourceItem } from "./types.js";
 
 const t = (id: string): string => `spotify:track:${id}`;
 const item = (id: string): SourceItem => ({ uri: t(id), name: id, artists: ["Artist"] });
 const src = (...ids: (string | null)[]): SourceItem[] =>
   ids.map((id) => (id === null ? null : item(id)));
+const rule = (
+  id: string,
+  kind: RuleKind,
+  song: string,
+  n: number | null = null,
+  over: Partial<MixRuleInput> = {},
+): MixRuleInput => ({ id, kind, uri: t(song), n, removedPlays: 0, deletedCopies: [], ...over });
 const input = (
   source: SourceItem[],
   rules: MixRuleInput[] = [],
@@ -15,179 +22,139 @@ const input = (
   rules,
   keepSourceOrder: true,
   seed: 0,
+  manualOrder: null,
+  bench: [],
   ...over,
 });
-const base = (uri: string) => ({ uri, ruleIndex: null, ruleIndices: [], shiftedFrom: null });
+const keys = (i: BuildInput) => build(i).nodes.map((n) => n.key);
 
-describe("build", () => {
-  it("step 1: drops null and non-track items, counts them, keeps duplicates", () => {
-    const source: SourceItem[] = [
-      item("A"),
-      null,
-      { uri: "spotify:local:x", name: "x", artists: [] },
-      item("A"),
-    ];
-    const r = build(input(source));
-    expect(r.uris).toEqual([t("A"), t("A")]);
+describe("build v2", () => {
+  it("drops unavailable items and collapses duplicates to one Original", () => {
+    const r = build(
+      input([
+        item("A"),
+        null,
+        { uri: "spotify:local:x", name: "x", artists: [] },
+        item("A"),
+        item("B"),
+      ]),
+    );
+    expect(r.uris).toEqual([t("A"), t("B")]);
     expect(r.stats.skippedUnavailable).toBe(2);
   });
 
-  it("step 2: keeps source order, or applies the seeded shuffle", () => {
-    const source = src("01", "02", "03", "04", "05");
-    expect(build(input(source)).uris).toEqual(["01", "02", "03", "04", "05"].map(t));
+  it("shuffles with the seed when no Manual order", () => {
     // Worked by hand from mulberry32(42): j = 3, 1, 2, 1.
-    expect(build(input(source, [], { keepSourceOrder: false, seed: 42 })).uris).toEqual(
-      ["01", "05", "03", "02", "04"].map(t),
-    );
+    expect(
+      build(input(src("01", "02", "03", "04", "05"), [], { keepSourceOrder: false, seed: 42 }))
+        .uris,
+    ).toEqual(["01", "05", "03", "02", "04"].map(t));
   });
 
-  it("step 3: a rule whose song is not available reports an issue and keeps index numbering", () => {
-    const r = build(
-      input(src("A", "B", "C"), [
-        { kind: "pin_first", uri: t("Z"), n: null },
-        { kind: "pin_first", uri: t("C"), n: null },
-      ]),
-    );
-    expect(r.issues).toEqual([{ kind: "unavailable_rule_song", ruleIndex: 0 }]);
-    expect(r.preview).toEqual([
-      { uri: t("C"), ruleIndex: 1, ruleIndices: [1], shiftedFrom: null },
-      base(t("A")),
-      base(t("B")),
+  it("Start with adds a copy at slot 0 and the Original stays in place", () => {
+    const r = build(input(src("A", "B", "C"), [rule("p", "pin_first", "C")]));
+    expect(r.uris).toEqual(["C", "A", "B", "C"].map(t));
+    expect(r.nodes[0]).toEqual({
+      key: "r:p:0",
+      role: "copy",
+      uri: t("C"),
+      plays: 1,
+      ruleIndex: 0,
+      ruleIndices: [0],
+      shiftedFrom: null,
+      copyIndex: 0,
+      firstSlot: 0,
+    });
+    expect(r.nodes[3]?.key).toBe(`b:${t("C")}`);
+  });
+
+  it("every N inserts floor(B/n) copies at k*(n+1)-1", () => {
+    // B=6, n=3: 2 copies at 3 and 7, L=8.
+    expect(keys(input(src("A", "B", "C", "D", "E", "F"), [rule("e", "every_n", "A", 3)]))).toEqual([
+      `b:${t("A")}`,
+      `b:${t("B")}`,
+      `b:${t("C")}`,
+      "r:e:1",
+      `b:${t("D")}`,
+      `b:${t("E")}`,
+      `b:${t("F")}`,
+      "r:e:2",
     ]);
   });
 
-  it("step 4: removes every occurrence of an active rule's song from the Base list", () => {
-    const r = build(input(src("A", "B", "C", "A"), [{ kind: "pin_first", uri: t("A"), n: null }]));
-    expect(r.uris).toEqual([t("A"), t("B"), t("C")]);
+  it("Repeat makes the Original a stack; removedPlays lowers it; at 1 it is plain", () => {
+    const r = build(input(src("A", "B"), [rule("r", "repeat", "B", 3, { removedPlays: 1 })]));
+    expect(r.uris).toEqual(["A", "B", "B"].map(t));
+    expect(r.nodes[1]).toMatchObject({ plays: 2, ruleIndex: 0, ruleIndices: [0], firstSlot: 1 });
+    const plain = build(input(src("A", "B"), [rule("r", "repeat", "B", 3, { removedPlays: 2 })]));
+    expect(plain.nodes[1]).toMatchObject({ plays: 1, ruleIndex: null, ruleIndices: [] });
   });
 
-  it("step 5: every_n contributes floor(B / n) copies", () => {
+  it("Manual order wins; new Source songs are appended; stale URIs ignored", () => {
+    expect(
+      build(input(src("A", "B", "C", "D"), [], { manualOrder: [t("C"), t("Z"), t("A")] })).uris,
+    ).toEqual(["C", "A", "B", "D"].map(t));
+  });
+
+  it("Bench removes the Original but keeps its Start with copy", () => {
     const r = build(
-      input(src("1", "2", "3", "4", "5", "X"), [{ kind: "every_n", uri: t("X"), n: 2 }]),
+      input(src("A", "B", "C"), [rule("p", "pin_first", "B")], { bench: [t("B"), t("Z")] }),
     );
-    expect(r.stats.total).toBe(7);
+    expect(r.uris).toEqual(["B", "A", "C"].map(t));
+    expect(r.stats.benched).toBe(1);
+    expect(r.issues).toEqual([]);
   });
 
-  it("step 6: every_n lands at k*(n+1)-1", () => {
-    const r = build(input(src("1", "2", "3", "4", "X"), [{ kind: "every_n", uri: t("X"), n: 2 }]));
-    expect(r.uris).toEqual(["1", "2", "X", "3", "4", "X"].map(t));
+  it("a Repeat on a benched song places nothing and reports an issue", () => {
+    const r = build(input(src("A", "B"), [rule("r", "repeat", "B", 2)], { bench: [t("B")] }));
+    expect(r.uris).toEqual([t("A")]);
+    expect(r.issues).toEqual([{ kind: "rule_song_not_in_source", ruleIndex: 0 }]);
+    expect(r.stats.rulesApplied).toBe(0);
   });
 
-  it("step 6: repeat starts at the song's first index in the ordered list", () => {
-    const r = build(input(src("A", "B", "C", "D"), [{ kind: "repeat", uri: t("B"), n: 2 }]));
-    expect(r.uris).toEqual(["A", "B", "B", "C", "D"].map(t));
-  });
-
-  it("step 6: repeat start is clamped to L - n", () => {
-    const r = build(
-      input(src("A", "B", "X", "C"), [
-        { kind: "repeat", uri: t("C"), n: 3 },
-        { kind: "every_n", uri: t("X"), n: 10 },
-      ]),
-    );
-    // X gets max(1, floor(2/10)) = 1 copy (ADR-0019), clamped into range and shifted back.
-    expect(r.uris).toEqual(["A", "B", "X", "C", "C", "C"].map(t));
-  });
-
-  it("step 7: a taken slot shifts the lower rule forward", () => {
-    const r = build(
-      input(src("B", "A", "C"), [
-        { kind: "pin_first", uri: t("A"), n: null },
-        { kind: "repeat", uri: t("B"), n: 2 },
-      ]),
-    );
-    expect(r.preview).toEqual([
-      { uri: t("A"), ruleIndex: 0, ruleIndices: [0], shiftedFrom: null },
-      { uri: t("B"), ruleIndex: 1, ruleIndices: [1], shiftedFrom: 0 },
-      { uri: t("B"), ruleIndex: 1, ruleIndices: [1], shiftedFrom: 1 },
-      base(t("C")),
-    ]);
-  });
-
-  it("step 7: shifts backward when no free slot exists ahead", () => {
-    const r = build(
-      input(src("A", "B", "X", "Y"), [
-        { kind: "every_n", uri: t("X"), n: 10 },
-        { kind: "repeat", uri: t("Y"), n: 2 },
-        { kind: "repeat", uri: t("Y"), n: 2 },
-      ]),
-    );
-    expect(r.preview).toEqual([
-      base(t("A")),
-      base(t("B")),
-      { uri: t("Y"), ruleIndex: 2, ruleIndices: [2], shiftedFrom: 4 },
-      { uri: t("Y"), ruleIndex: 1, ruleIndices: [1], shiftedFrom: null },
-      { uri: t("Y"), ruleIndex: 1, ruleIndices: [1], shiftedFrom: null },
-      { uri: t("Y"), ruleIndex: 2, ruleIndices: [2], shiftedFrom: 3 },
-      { uri: t("X"), ruleIndex: 0, ruleIndices: [0], shiftedFrom: null },
-    ]);
-  });
-
-  it("step 5: every_n places at least one copy when B < n (ADR-0019)", () => {
-    const r = build(input(src("1", "2", "X"), [{ kind: "every_n", uri: t("X"), n: 5 }]));
-    expect(r.uris).toEqual(["1", "2", "X"].map(t));
-  });
-
-  it("step 5: every_n places one copy when B = 0 (ADR-0019)", () => {
-    const r = build(input(src("X"), [{ kind: "every_n", uri: t("X"), n: 2 }]));
-    expect(r.preview).toEqual([{ uri: t("X"), ruleIndex: 0, ruleIndices: [0], shiftedFrom: null }]);
+  it("Start with on a song not in the Source still places its copy", () => {
+    const r = build(input(src("A", "B"), [rule("p", "pin_first", "Z")]));
+    expect(r.uris).toEqual(["Z", "A", "B"].map(t));
+    expect(r.issues).toEqual([{ kind: "rule_song_not_in_source", ruleIndex: 0 }]);
     expect(r.stats.rulesApplied).toBe(1);
   });
 
-  it("step 7: every_n landing on a copy of the same song merges instead of shifting (ADR-0020)", () => {
-    // B = 2. Repeat 3 on A starts at min(2, 6 - 3) = 2 → slots 2..4. Every 2 on A wants slot 2.
+  it("a deleted copy is removed and later nodes move up", () => {
     const r = build(
-      input(src("1", "2", "A"), [
-        { kind: "repeat", uri: t("A"), n: 3 },
-        { kind: "every_n", uri: t("A"), n: 2 },
+      input(src("A", "B", "C", "D", "E", "F"), [
+        rule("e", "every_n", "A", 3, { deletedCopies: [1] }),
       ]),
     );
-    expect(r.preview).toEqual([
-      base(t("1")),
-      base(t("2")),
-      { uri: t("A"), ruleIndex: 0, ruleIndices: [0, 1], shiftedFrom: null },
-      { uri: t("A"), ruleIndex: 0, ruleIndices: [0], shiftedFrom: null },
-      { uri: t("A"), ruleIndex: 0, ruleIndices: [0], shiftedFrom: null },
+    expect(r.uris).toEqual(["A", "B", "C", "D", "E", "F", "A"].map(t));
+    expect(r.nodes.at(-1)).toMatchObject({ key: "r:e:2", firstSlot: 6 });
+  });
+
+  it("a collision shifts the lower-priority copy forward with shiftedFrom", () => {
+    // B=3, pin Z + every 2 of A: L=5, every-N copy at 2. Pin at 0. No clash; use two pins.
+    const r = build(
+      input(src("A", "B"), [rule("p1", "pin_first", "A"), rule("p2", "pin_first", "B")]),
+    );
+    expect(r.nodes.map((n) => [n.key, n.shiftedFrom])).toEqual([
+      ["r:p1:0", null],
+      ["r:p2:0", 0],
+      [`b:${t("A")}`, null],
+      [`b:${t("B")}`, null],
     ]);
-    expect(r.stats.total).toBe(5);
   });
 
-  it("step 7: every_n landing on a different song still shifts", () => {
-    const r = build(
-      input(src("1", "2", "A", "B"), [
-        { kind: "repeat", uri: t("A"), n: 3 },
-        { kind: "every_n", uri: t("B"), n: 2 },
-      ]),
-    );
-    expect(r.preview.find((s) => s.uri === t("B"))?.shiftedFrom).toBe(2);
-  });
-
-  it("step 8: fills remaining slots with the Base list in order", () => {
-    const r = build(input(src("A", "B", "C"), [{ kind: "pin_first", uri: t("C"), n: null }]));
-    expect(r.preview.slice(1)).toEqual([base(t("A")), base(t("B"))]);
-  });
-
-  it("step 9: reports stats, counting only active rules with a non-zero count", () => {
-    const r = build(
-      input(src("A", "B", "X", "Y", null), [
-        { kind: "every_n", uri: t("X"), n: 10 },
-        { kind: "repeat", uri: t("Y"), n: 2 },
-        { kind: "pin_first", uri: t("Q"), n: null },
-      ]),
-    );
-    expect(r.stats).toEqual({ total: 5, rulesApplied: 2, skippedUnavailable: 1 });
-    expect(r.issues).toEqual([{ kind: "unavailable_rule_song", ruleIndex: 2 }]);
-  });
-
-  it("step 10: throws RangeError on invalid arguments", () => {
-    const s = src("A");
-    expect(() => build(input(s, [{ kind: "every_n", uri: t("A"), n: 1 }]))).toThrow(RangeError);
-    expect(() => build(input(s, [{ kind: "repeat", uri: t("A"), n: 11 }]))).toThrow(RangeError);
-    expect(() => build(input(s, [{ kind: "repeat", uri: t("A"), n: null }]))).toThrow(RangeError);
-    expect(() => build(input(s, [{ kind: "every_n", uri: t("A"), n: 2.5 }]))).toThrow(RangeError);
-    expect(() => build(input(s, [{ kind: "pin_first", uri: t("A"), n: 2 }]))).toThrow(RangeError);
-    expect(() => build(input(s, [], { seed: -1 }))).toThrow(RangeError);
-    expect(() => build(input(s, [], { seed: 1.5 }))).toThrow(RangeError);
-    expect(() => build(input(s, [], { seed: 2 ** 32 }))).toThrow(RangeError);
+  it("validates removedPlays, deletedCopies and unique ids", () => {
+    expect(() =>
+      build(input(src("A"), [rule("r", "repeat", "A", 2, { removedPlays: 2 })])),
+    ).toThrow(RangeError);
+    expect(() =>
+      build(input(src("A"), [rule("p", "pin_first", "A", null, { removedPlays: 1 })])),
+    ).toThrow(RangeError);
+    expect(() =>
+      build(input(src("A"), [rule("p", "pin_first", "A", null, { deletedCopies: [-1] })])),
+    ).toThrow(RangeError);
+    expect(() =>
+      build(input(src("A"), [rule("x", "pin_first", "A"), rule("x", "pin_first", "A")])),
+    ).toThrow(RangeError);
+    expect(() => build(input(src("A"), [], { seed: -1 }))).toThrow(RangeError);
   });
 });
