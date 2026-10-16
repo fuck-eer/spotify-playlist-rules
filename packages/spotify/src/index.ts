@@ -28,3 +28,11 @@ export {
   type WriteTargetInput,
   type WriteTargetResult,
 } from "./writer.js";
+export {
+  PLAYER_PLAYLIST_NAME,
+  PLAYER_PLAYLIST_DESCRIPTION,
+  hasPlaybackScopes,
+  findActiveDevice,
+  startPlaylistPlayback,
+  isPlaying,
+} from "./player.js";

@@ -34,7 +34,7 @@ describe("buildAuthorizeUrl", () => {
       code_challenge_method: "S256",
       code_challenge: "ch",
       scope:
-        "playlist-read-private playlist-read-collaborative playlist-modify-private user-library-read",
+        "playlist-read-private playlist-read-collaborative playlist-modify-private user-library-read user-read-playback-state user-modify-playback-state",
     });
   });
 });

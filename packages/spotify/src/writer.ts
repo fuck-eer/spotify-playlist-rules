@@ -7,6 +7,8 @@ export interface WriteTargetInput {
   targetPlaylistId: string | null;
   /** "Rules: <mix name>" */
   defaultName: string;
+  /** Used only when creating; defaults to the Target description. */
+  description?: string;
   uris: string[];
   onProgress?: (done: number, total: number) => void;
 }
@@ -41,13 +43,14 @@ export async function writeTarget(
   input: WriteTargetInput,
 ): Promise<WriteTargetResult> {
   const { targetPlaylistId, defaultName, uris, onProgress } = input;
+  const description = input.description ?? DESCRIPTION;
   let playlistId = targetPlaylistId;
   let created = false;
   if (playlistId === null || !(await targetExists(c, playlistId))) {
     const { data } = await c.request<{ id: string }>("POST", "/me/playlists", {
       name: defaultName,
       public: false,
-      description: DESCRIPTION,
+      description,
     });
     playlistId = data.id;
     created = true;

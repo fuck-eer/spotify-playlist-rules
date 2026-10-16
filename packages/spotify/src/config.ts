@@ -1,9 +1,11 @@
-/** Spec A8: no public-playlist scope, targets are private. */
+/** Spec A8: no public-playlist scope, targets are private. Playback scopes for Play (ADR-0023). */
 export const SCOPES = [
   "playlist-read-private",
   "playlist-read-collaborative",
   "playlist-modify-private",
   "user-library-read",
+  "user-read-playback-state",
+  "user-modify-playback-state",
 ] as const;
 
 export interface SpotifyConfig {
