@@ -4,7 +4,9 @@
 
 **Blocked by:** 02
 
-**Status:** done
+**Status:** done (superseded in part by 04)
+
+> **Superseded by 04:** the `openExternal` / `window.location.assign` auto-open and the navigating Playwright check below were replaced by the Play success dialog with a tapped Open in Spotify link (ticket 04, spec "Mix page"). `apps/web/lib/open-external.ts` no longer exists.
 
 - [x] Mix page passes `canAutoPlay` from stored `users.scopes` via `hasPlaybackScopes`
 - [x] `openExternal(url)` in `apps/web/lib/open-external.ts` (calls `window.location.assign`)
