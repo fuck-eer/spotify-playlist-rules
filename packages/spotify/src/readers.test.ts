@@ -5,6 +5,7 @@ import {
   getMe,
   getSourceTrackCount,
   listSources,
+  pickImage,
   readLikedSongs,
   readPlaylistItems,
 } from "./readers.js";
@@ -76,7 +77,12 @@ describe("readPlaylistItems", () => {
     const progress: [number, number][] = [];
     const out = await readPlaylistItems(c, "pl1", (d, t) => progress.push([d, t]));
     expect(out).toHaveLength(120);
-    expect(out[119]).toEqual({ uri: "spotify:track:t119", name: "Song 119", artists: ["A", "B"] });
+    expect(out[119]).toEqual({
+      uri: "spotify:track:t119",
+      name: "Song 119",
+      artists: ["A", "B"],
+      imageUrl: null,
+    });
     const calls = fake.calls.filter((x) => x.path === "/v1/playlists/pl1/items");
     expect(calls.map((x) => [x.query.get("limit"), x.query.get("offset")])).toEqual([
       ["50", "0"],
@@ -84,7 +90,7 @@ describe("readPlaylistItems", () => {
       ["50", "100"],
     ]);
     expect(calls[0]!.query.get("fields")).toBe(
-      "total,next,items(is_local,item(uri,name,type,is_playable,restrictions,artists(name)),track(uri,name,type,is_playable,restrictions,artists(name)))",
+      "total,next,items(is_local,item(uri,name,type,is_playable,restrictions,artists(name),album(images)),track(uri,name,type,is_playable,restrictions,artists(name),album(images)))",
     );
     expect(progress).toEqual([
       [50, 120],
@@ -110,8 +116,8 @@ describe("readPlaylistItems", () => {
       null,
       null,
       null,
-      { uri: "spotify:track:t3", name: "Song 3", artists: ["A", "B"] },
-      { uri: "spotify:track:t4", name: "Song 4", artists: ["A", "B"] },
+      { uri: "spotify:track:t3", name: "Song 3", artists: ["A", "B"], imageUrl: null },
+      { uri: "spotify:track:t4", name: "Song 4", artists: ["A", "B"], imageUrl: null },
     ]);
   });
 
@@ -135,12 +141,12 @@ describe("readPlaylistItems", () => {
       { is_local: false, item: { ...track(5), is_playable: true } },
     ]);
     expect(await readPlaylistItems(c, "pl4")).toEqual([
-      { uri: "spotify:track:t1", name: "Song 1", artists: ["A", "B"] },
+      { uri: "spotify:track:t1", name: "Song 1", artists: ["A", "B"], imageUrl: null },
       null,
       null,
       null,
       null,
-      { uri: "spotify:track:t5", name: "Song 5", artists: ["A", "B"] },
+      { uri: "spotify:track:t5", name: "Song 5", artists: ["A", "B"], imageUrl: null },
     ]);
   });
 
@@ -160,7 +166,12 @@ describe("readLikedSongs", () => {
     const progress: [number, number][] = [];
     const out = await readLikedSongs(c, (d, t) => progress.push([d, t]));
     expect(out).toHaveLength(52);
-    expect(out[0]).toEqual({ uri: "spotify:track:t1", name: "Song 1", artists: ["A", "B"] });
+    expect(out[0]).toEqual({
+      uri: "spotify:track:t1",
+      name: "Song 1",
+      artists: ["A", "B"],
+      imageUrl: null,
+    });
     expect(out[1]).toBeNull();
     expect(progress).toEqual([
       [50, 52],
@@ -232,5 +243,43 @@ describe("getSourceTrackCount", () => {
   it("reads Liked Songs' total", async () => {
     fake.on("GET", /^\/v1\/me\/tracks$/, () => ({ body: { total: 600, items: [] } }));
     expect(await getSourceTrackCount(c, { type: "liked", id: null })).toBe(600);
+  });
+});
+
+describe("pickImage / imageUrl", () => {
+  it("picks the album image closest to 300 px, else the first, else null", () => {
+    expect(
+      pickImage([
+        { url: "big", width: 640 },
+        { url: "mid", width: 300 },
+        { url: "small", width: 64 },
+      ]),
+    ).toBe("mid");
+    expect(
+      pickImage([
+        { url: "big", width: 640 },
+        { url: "small", width: 64 },
+      ]),
+    ).toBe("small");
+    expect(pickImage([{ url: "a" }, { url: "b" }])).toBe("a");
+    expect(pickImage([])).toBeNull();
+    expect(pickImage(undefined)).toBeNull();
+  });
+
+  it("readPlaylistItems maps album images and asks for album(images)", async () => {
+    let fields = "";
+    fake.on("GET", /\/playlists\/p1\/items$/, (req) => {
+      fields = req.query.get("fields") ?? "";
+      return {
+        body: {
+          total: 1,
+          next: null,
+          items: [{ item: { ...track(1), album: { images: [{ url: "img300", width: 300 }] } } }],
+        },
+      };
+    });
+    const out = await readPlaylistItems(c, "p1");
+    expect(out[0]?.imageUrl).toBe("img300");
+    expect(fields).toContain("album(images)");
   });
 });

@@ -112,6 +112,33 @@ describe.skipIf(!reachable)("database schema", () => {
     }
   });
 
+  it("0006: arrangement columns, defaults and checks", async () => {
+    const { id: u } = await insertTestUser(sql);
+    const r = await rule(u, "repeat", 3);
+    const m = await mix(u);
+    const [mx] = await sql<
+      { manual_order: string[] | null; bench: string[]; arrangement_version: number }[]
+    >`
+      select manual_order, bench, arrangement_version from mixes where id = ${m}`;
+    expect(mx).toEqual({ manual_order: null, bench: [], arrangement_version: 0 });
+    await sql`insert into mix_rules (mix_id, rule_id, position, track_uri) values (${m}, ${r}, 0, 'spotify:track:a')`;
+    const [mr] = await sql<{ removed_plays: number; deleted_copies: number[] }[]>`
+      select removed_plays, deleted_copies from mix_rules where mix_id = ${m}`;
+    expect(mr).toEqual({ removed_plays: 0, deleted_copies: [] });
+    expect(await pgCode(sql`update mix_rules set removed_plays = -1 where mix_id = ${m}`)).toBe(
+      "23514",
+    );
+    await sql`insert into track_cache (uri, name, artists, image_url) values ('spotify:track:a', 'A', '{}', 'http://i')`;
+    await sql`insert into sessions (id_hash, user_id, expires_at) values ('h1', ${u}, now() + interval '1 day')`;
+    const [se] = await sql<{ kind: string }[]>`select kind from sessions where id_hash = 'h1'`;
+    expect(se!.kind).toBe("web");
+    expect(
+      await pgCode(
+        sql`insert into sessions (id_hash, user_id, expires_at, kind) values ('h2', ${u}, now(), 'tv')`,
+      ),
+    ).toBe("23514");
+  });
+
   it("enables RLS on all 7 tables", async () => {
     const rows = await sql<{ relname: string; relrowsecurity: boolean }[]>`
       select relname, relrowsecurity from pg_class

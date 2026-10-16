@@ -4,7 +4,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Glossary:** Manual order, Bench, Rule copy, Source sync, Source playlist. **ADRs:** 0028, 0030.
 

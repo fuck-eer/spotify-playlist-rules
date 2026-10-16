@@ -11,6 +11,10 @@ export interface MixRuleRow {
   trackUri: string;
   /** From track_cache; null until the Source has been read once. */
   songName: string | null;
+  /** Repeat plays deleted from the stack (ADR-0030). */
+  removedPlays: number;
+  /** Deleted Rule copies by copy index (ADR-0030). */
+  deletedCopies: number[];
 }
 
 type Tx = postgres.Sql | postgres.TransactionSql;
@@ -23,6 +27,8 @@ interface DbRow {
   position: number;
   track_uri: string;
   song_name: string | null;
+  removed_plays: number;
+  deleted_copies: number[];
 }
 
 function toRow(r: DbRow): MixRuleRow {
@@ -34,12 +40,15 @@ function toRow(r: DbRow): MixRuleRow {
     position: r.position,
     trackUri: r.track_uri,
     songName: r.song_name,
+    removedPlays: r.removed_plays,
+    deletedCopies: r.deleted_copies,
   };
 }
 
 function select(sql: Tx, userId: string, mixId: string) {
   return sql<DbRow[]>`
-    select mr.id, mr.rule_id, r.kind, r.n, mr.position, mr.track_uri, tc.name as song_name
+    select mr.id, mr.rule_id, r.kind, r.n, mr.position, mr.track_uri, tc.name as song_name,
+      mr.removed_plays, mr.deleted_copies
     from mix_rules mr
     join mixes m on m.id = mr.mix_id and m.user_id = ${userId}
     join rules r on r.id = mr.rule_id

@@ -29,6 +29,8 @@ const mr = (id: string, position: number, songName: string): MixRuleRow => ({
   position,
   trackUri: `spotify:track:${songName.toLowerCase()}`,
   songName,
+  removedPlays: 0,
+  deletedCopies: [],
 });
 const LIBRARY = {
   rules: [
