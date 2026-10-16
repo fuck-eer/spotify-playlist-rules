@@ -1,0 +1,150 @@
+{
+  "name": "Every 3 over a 9-song Base list",
+  "input": {
+    "source": [
+      {
+        "uri": "spotify:track:T01",
+        "name": "Song 01",
+        "artists": ["Artist"]
+      },
+      {
+        "uri": "spotify:track:T02",
+        "name": "Song 02",
+        "artists": ["Artist"]
+      },
+      {
+        "uri": "spotify:track:T03",
+        "name": "Song 03",
+        "artists": ["Artist"]
+      },
+      {
+        "uri": "spotify:track:T04",
+        "name": "Song 04",
+        "artists": ["Artist"]
+      },
+      {
+        "uri": "spotify:track:T05",
+        "name": "Song 05",
+        "artists": ["Artist"]
+      },
+      {
+        "uri": "spotify:track:T06",
+        "name": "Song 06",
+        "artists": ["Artist"]
+      },
+      {
+        "uri": "spotify:track:T07",
+        "name": "Song 07",
+        "artists": ["Artist"]
+      },
+      {
+        "uri": "spotify:track:T08",
+        "name": "Song 08",
+        "artists": ["Artist"]
+      },
+      {
+        "uri": "spotify:track:T09",
+        "name": "Song 09",
+        "artists": ["Artist"]
+      },
+      {
+        "uri": "spotify:track:T10",
+        "name": "Song 10",
+        "artists": ["Artist"]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "every_n",
+        "uri": "spotify:track:T10",
+        "n": 3
+      }
+    ],
+    "keepSourceOrder": true,
+    "seed": 0
+  },
+  "expected": {
+    "uris": [
+      "spotify:track:T01",
+      "spotify:track:T02",
+      "spotify:track:T03",
+      "spotify:track:T10",
+      "spotify:track:T04",
+      "spotify:track:T05",
+      "spotify:track:T06",
+      "spotify:track:T10",
+      "spotify:track:T07",
+      "spotify:track:T08",
+      "spotify:track:T09",
+      "spotify:track:T10"
+    ],
+    "preview": [
+      {
+        "uri": "spotify:track:T01",
+        "ruleIndex": null,
+        "shiftedFrom": null
+      },
+      {
+        "uri": "spotify:track:T02",
+        "ruleIndex": null,
+        "shiftedFrom": null
+      },
+      {
+        "uri": "spotify:track:T03",
+        "ruleIndex": null,
+        "shiftedFrom": null
+      },
+      {
+        "uri": "spotify:track:T10",
+        "ruleIndex": 0,
+        "shiftedFrom": null
+      },
+      {
+        "uri": "spotify:track:T04",
+        "ruleIndex": null,
+        "shiftedFrom": null
+      },
+      {
+        "uri": "spotify:track:T05",
+        "ruleIndex": null,
+        "shiftedFrom": null
+      },
+      {
+        "uri": "spotify:track:T06",
+        "ruleIndex": null,
+        "shiftedFrom": null
+      },
+      {
+        "uri": "spotify:track:T10",
+        "ruleIndex": 0,
+        "shiftedFrom": null
+      },
+      {
+        "uri": "spotify:track:T07",
+        "ruleIndex": null,
+        "shiftedFrom": null
+      },
+      {
+        "uri": "spotify:track:T08",
+        "ruleIndex": null,
+        "shiftedFrom": null
+      },
+      {
+        "uri": "spotify:track:T09",
+        "ruleIndex": null,
+        "shiftedFrom": null
+      },
+      {
+        "uri": "spotify:track:T10",
+        "ruleIndex": 0,
+        "shiftedFrom": null
+      }
+    ],
+    "issues": [],
+    "stats": {
+      "total": 12,
+      "rulesApplied": 1,
+      "skippedUnavailable": 0
+    }
+  }
+}

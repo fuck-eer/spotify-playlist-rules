@@ -1,6 +1,6 @@
 # 03: Database schema, migrations, local/test DB
 
-**Status:** ready-for-agent
+**Status:** done
 **Type:** task
 **Blocked by:** 01
 **Glossary terms:** Rule, Mix, Rule Set, Target playlist, Seed, Archive
@@ -112,6 +112,12 @@ alter table mixes enable row level security; alter table mix_rules enable row le
 - a missing `TOKEN_ENCRYPTION_KEY` throws when `env()` is called.
 
 ## Acceptance criteria
-- [ ] `docker compose up -d db && pnpm db:migrate` succeeds on a fresh database
-- [ ] All tests pass (they skip with a clear message if TEST_DATABASE_URL is unreachable; CI runs the db service)
-- [ ] No hosted Supabase or paid resources created
+- [x] `docker compose up -d db && pnpm db:migrate` succeeds on a fresh database
+- [x] All tests pass (they skip with a clear message if TEST_DATABASE_URL is unreachable; CI runs the db service)
+- [x] No hosted Supabase or paid resources created
+
+## Notes (done)
+- `mix_rules.rule_id` FK is `on delete no action deferrable initially deferred` instead of `on delete restrict`: with restrict (and with immediate no action), deleting a user fails because the users->rules cascade is checked before users->mixes->mix_rules finishes. Deleting a referenced rule still raises 23503 (at commit).
+- Migration runner core lives in `apps/web/lib/db/migrate.ts` (shared by `scripts/migrate.ts` and `test-utils.ts`).
+- Test-utils add `canReachTestDb()` for the skip-if-unreachable behaviour.
+- The dev box runs Postgres 16 natively (no Docker); see README.

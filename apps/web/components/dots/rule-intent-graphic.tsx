@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import type { RuleKind } from "@/lib/engine-types";
+import type { RuleKind } from "@rulemix/rules-engine";
 import { DRAFT_DOT, NEUTRAL_DOT } from "@/lib/palette";
 import { DotLine, type DotItem } from "./dot-line";
 
