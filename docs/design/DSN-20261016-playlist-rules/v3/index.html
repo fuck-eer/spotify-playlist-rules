@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>rulemix · DSN-20261016-playlist-rules</title>
+<style>
+:root{--bg:#121212;--s1:#181818;--s2:#242424;--s3:#2e2e2e;--line:#333;--tx:#fff;--mut:#b3b3b3;--dim:#7a7a7a;--g:#1DB954;
+--r1:#e8b04b;--r2:#7aa7ff;--r3:#e57a9a;--r4:#9ad08a;--r5:#c9a3f0;--mono:ui-monospace,SFMono-Regular,Menlo,monospace;--ease:cubic-bezier(.2,.7,.2,1)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a0a;color:var(--tx);font:14px/1.4 -apple-system,"Helvetica Neue",Inter,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.stage{display:flex;gap:28px;justify-content:center;padding:40px 24px;flex-wrap:nowrap}
+.phone{width:360px;height:760px;flex:none;border-radius:44px;background:var(--bg);border:10px solid #000;box-shadow:0 0 0 1px #2a2a2a;position:relative;overflow:hidden}
+@media (max-width:600px){.stage{padding:0}.phone:not(:first-child){display:none}.phone{width:100vw;height:100vh;border:0;border-radius:0}}
+@media (min-width:601px) and (max-width:1900px){.stage{zoom:.72}}
+.scr{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;transform:translateX(16px);pointer-events:none;transition:opacity .2s var(--ease),transform .2s var(--ease)}
+.scr.on{opacity:1;transform:none;pointer-events:auto}
+.bar{height:40px;flex:none}
+.top{display:flex;align-items:center;gap:10px;padding:6px 16px 10px}
+.top h1{font-size:26px;font-weight:800;letter-spacing:-.02em;flex:1}
+.top h2{font-size:17px;font-weight:700;flex:1}
+.ib{width:38px;height:38px;border-radius:50%;background:var(--s2);border:0;color:var(--tx);display:grid;place-items:center;cursor:pointer}
+.ib svg{width:18px;height:18px}
+.body{flex:1;overflow-y:auto;padding:0 16px 130px;scrollbar-width:none}
+.lbl{font:600 11px var(--mono);letter-spacing:.12em;color:var(--mut);margin:20px 0 8px}
+.hint{color:var(--dim);font-size:12px;margin-top:6px}
+.btn{border:0;border-radius:999px;font-weight:700;font-size:15px;padding:14px 20px;cursor:pointer;color:#000;background:#fff}
+.btn.g{background:var(--g)}.btn.q{background:transparent;color:var(--tx);border:1px solid #555}
+.btn.sm{padding:9px 16px;font-size:13px}
+.cover{width:56px;height:56px;border-radius:4px;flex:none;display:grid;grid-template-columns:1fr 1fr;overflow:hidden}
+.cover i{display:block}
+.row{display:flex;align-items:center;gap:12px;padding:8px 0}
+.row .t{font-weight:600}.row .m{color:var(--mut);font-size:12px}
+/* sign in */
+.sign{justify-content:center;align-items:center;text-align:center;padding:32px}
+.wm{display:flex;align-items:center;gap:10px;font-size:34px;font-weight:800;letter-spacing:-.03em}
+.mark{display:grid;grid-template-columns:repeat(3,9px);gap:3px}.mark i{height:9px;border-radius:2px;background:#fff}.mark i.o{background:#555}
+.sign p{color:var(--mut);margin:14px 0 40px;font-size:16px;max-width:260px}
+.sign .note{font:11px var(--mono);color:var(--dim);margin-top:18px;max-width:260px}
+/* home */
+.mix{display:flex;gap:12px;align-items:center;background:var(--s1);border-radius:8px;padding:10px;margin-bottom:8px;cursor:pointer}
+.mix .t{font-weight:700;font-size:15px}.mix .m{color:var(--mut);font-size:12px;margin-top:2px}
+.fab{position:absolute;right:16px;bottom:24px}
+/* builder */
+.name{width:100%;background:transparent;border:0;border-bottom:1px solid var(--line);color:var(--tx);font-size:16px;font-weight:700;padding:4px 0;outline:none}
+.src{display:flex;gap:12px;align-items:center;background:var(--s1);border-radius:8px;padding:10px;cursor:pointer}
+.rules{position:relative}
+.rc{display:flex;align-items:center;gap:12px;background:var(--s1);border-radius:8px;padding:12px;margin-bottom:6px;user-select:none;touch-action:none;transition:transform .2s var(--ease),box-shadow .2s}
+.rc.drag{transition:none;z-index:5;box-shadow:0 10px 30px #000a;background:var(--s2)}
+.rc .n{font:700 13px var(--mono);width:26px;color:var(--mut)}
+.rc .s{flex:1;font-size:14px}.rc .s b{font-weight:600}
+.rc .c{font:11px var(--mono);color:var(--dim);margin-top:2px}
+.dot{width:8px;height:8px;border-radius:2px;flex:none}
+.hdl{cursor:grab;color:var(--dim);padding:4px}
+.add{width:100%;background:transparent;border:1px dashed #444;color:var(--mut);border-radius:8px;padding:12px;font-weight:600;cursor:pointer}
+.tg{display:flex;align-items:flex-start;gap:12px;padding:10px 0}
+.tg>div{flex:1}.tg .t{font-weight:600}
+.sw{width:40px;height:24px;border-radius:12px;background:#555;position:relative;cursor:pointer;flex:none;border:0;transition:background .2s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s var(--ease)}
+.sw.on{background:#fff}.sw.on::after{transform:translateX(16px);background:#000}
+.sum{font:12px var(--mono);color:var(--mut);margin-bottom:8px}
+.dock{position:absolute;left:0;right:0;bottom:0;padding:14px 16px 26px;background:var(--bg);border-top:1px solid var(--line)}
+.dock .btn{width:100%}
+.toast{position:absolute;left:16px;right:16px;bottom:96px;background:#fff;color:#000;border-radius:8px;padding:12px 14px;font-weight:600;font-size:13px;opacity:0;transform:translateY(8px);transition:.2s var(--ease);pointer-events:none}
+.toast.on{opacity:1;transform:none}
+/* library */
+.tabs{display:flex;gap:8px;padding:0 16px 8px}
+.tab{background:var(--s2);border:0;color:var(--tx);border-radius:999px;padding:7px 14px;font-size:13px;cursor:pointer}
+.tab.on{background:#fff;color:#000;font-weight:600}
+.lr{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #222;position:relative}
+.lr .s{flex:1}
+.menu{position:absolute;right:0;top:44px;background:var(--s3);border-radius:6px;padding:4px;z-index:9;display:none;min-width:140px;box-shadow:0 10px 30px #000a}
+.menu.on{display:block}.menu button{display:block;width:100%;text-align:left;background:none;border:0;color:var(--tx);padding:10px 12px;font-size:14px;cursor:pointer;border-radius:4px}
+.menu button:hover{background:#3a3a3a}
+.empty{color:var(--mut);text-align:center;padding:40px 10px}
+.empty h3{color:var(--tx);font-size:18px;margin-bottom:6px}
+.dlg{position:absolute;inset:0;background:#000b;display:none;align-items:flex-end;z-index:20}
+.dlg.on{display:flex}
+.dlg>div{background:var(--s2);width:100%;border-radius:16px 16px 0 0;padding:24px 20px 32px}
+.dlg h3{font-size:18px;margin-bottom:6px}.dlg p{color:var(--mut);margin-bottom:20px}
+.dlg .btn{width:100%;margin-top:8px}.btn.red{background:transparent;color:#f15e6c;border:1px solid #f15e6c}
+/* editor */
+.viz{background:var(--s1);border-radius:10px;padding:14px 12px;margin-top:4px}
+.cap{font:12px var(--mono);color:var(--mut);margin-top:10px}
+.chips{display:flex;gap:8px;flex-wrap:nowrap;margin-top:16px}
+.chip{background:var(--s2);border:1px solid transparent;color:var(--tx);border-radius:999px;padding:8px 14px;font-size:13px;cursor:pointer}
+.chip.on{border-color:#fff}
+.sent{font-size:24px;font-weight:700;line-height:1.9;margin-top:6px}
+.pill{display:inline-block;background:var(--s3);border-radius:999px;padding:0 12px;line-height:34px;cursor:pointer;border:1px solid #444}
+.pill.num{font-family:var(--mono)}
+.err{color:#f15e6c;font-size:12px;margin-top:8px;display:none}
+.dock .btn+.btn{margin-top:8px}
+
+.cover{background:var(--s2)}.cover i:nth-child(1),.cover i:nth-child(4){background:#3a3a3a}
+.dots{display:flex;flex-wrap:wrap;gap:7px}
+.d{width:12px;height:12px;border-radius:50%;background:#4a4a4a;transition:transform .2s var(--ease),background .2s}
+.legend{font:11px var(--mono);color:var(--dim);margin-top:10px}
+.viz svg,.pv svg{display:block;width:100%;height:auto}
+.sheet{position:absolute;inset:0;background:#000b;display:none;align-items:flex-end;z-index:20}
+.sheet.on{display:flex}
+.sheet>div{background:var(--s2);width:100%;border-radius:16px 16px 0 0;padding:20px 16px 28px;max-height:78%;overflow-y:auto}
+.sheet h3{font-size:18px;margin-bottom:4px}
+.pick{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;border-bottom:1px solid #333;color:var(--tx);text-align:left;padding:12px 2px;font-size:14px;cursor:pointer}
+.sheet .btn{width:100%;margin-top:14px}
+</style></head><body>
+<div class="stage" id="stage"></div>
+<template id="app">
+<div class="phone">
+ <section class="scr sign" data-s="signin">
+  <div class="wm"><span class="mark"><i></i><i class="o"></i><i class="o"></i><i class="o"></i><i></i><i class="o"></i><i class="o"></i><i class="o"></i><i></i></span>rulemix</div>
+  <p>Your playlist, your order. Spotify just plays it.</p>
+  <button class="btn" data-go="home">Continue with Spotify</button>
+  <div class="note">Dev mode: access is limited to the owner and 4 friends.</div>
+ </section>
+
+ <section class="scr" data-s="home">
+  <div class="bar"></div>
+  <div class="top"><h1>Mixes</h1>
+   <button class="ib" data-go="library" aria-label="Rules"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 5h10M7 10h10M7 15h10M2 5h2M2 10h2M2 15h2"/></svg></button></div>
+  <div class="body">
+   <div class="mix" data-go="builder"><div class="cover"><i></i><i></i><i></i><i></i></div><div><div class="t">Gym</div><div class="m">Liked Songs · 3 rules · 2h ago</div></div></div>
+   <div class="mix" data-go="builder"><div class="cover"><i></i><i></i><i></i><i></i></div><div><div class="t">Late drive</div><div class="m">Liked Songs · 3 rules · not generated</div></div></div>
+  </div>
+  <button class="btn fab" data-go="builder">New mix</button>
+ </section>
+
+ <section class="scr" data-s="builder">
+  <div class="bar"></div>
+  <div class="top"><button class="ib" data-go="home" aria-label="Back"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4l-6 6 6 6"/></svg></button><h2></h2>
+   <button class="ib" data-go="library" aria-label="Rules"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 5h10M7 10h10M7 15h10M2 5h2M2 10h2M2 15h2"/></svg></button></div>
+  <div class="body">
+   <input class="name" placeholder="Name this mix" value="Gym">
+   <div class="lbl">SOURCE</div>
+   <div class="src"><div class="cover"><i></i><i></i><i></i><i></i></div><div style="flex:1"><div style="font-weight:600">Liked Songs · 412 songs</div></div><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#b3b3b3" stroke-width="2"><path d="M8 4l6 6-6 6"/></svg></div>
+   <div class="hint">Discover Weekly and other Spotify-made lists need a copy in your library first.</div>
+   <div class="lbl">PREVIEW</div>
+   <div class="sum"></div>
+   <div class="pv" role="img"></div>
+   <div class="legend">One dot per song. Colour shows the rule.</div>
+   <div class="lbl">RULES</div>
+   <div class="rules"></div>
+   <button class="add addr">+ Add rule</button>
+   <div class="hint">Drag to reorder. The top rule wins a conflict.</div>
+   <div class="lbl">OPTIONS</div>
+   <div class="tg"><div><div class="t">Keep base order</div><div class="hint">Off reshuffles the base list once before rules run.</div></div><button class="sw on" data-opt="keep"></button></div>
+   <div class="tg"><div><div class="t">Remove rule songs from base</div><div class="hint">Rule songs only play where a rule puts them.</div></div><button class="sw" data-opt="rm"></button></div>
+  </div>
+  <div class="toast"></div>
+  <div class="dock"><button class="btn g gen">Generate playlist</button></div>
+  <div class="sheet rpick"><div><h3>Add a rule</h3><div class="rlist"></div><button class="btn q" data-go="editor">New rule</button></div></div>
+  <div class="sheet spick"><div><h3>Pick the rule's song</h3><div class="hint">Songs from this mix's source playlist.</div><div class="slist"></div></div></div>
+ </section>
+
+ <section class="scr" data-s="library">
+  <div class="bar"></div>
+  <div class="top"><button class="ib" data-back aria-label="Back"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4l-6 6 6 6"/></svg></button><h1>Rules</h1></div>
+  <div class="tabs"><button class="tab on" data-tab="active">Active</button><button class="tab" data-tab="pinned">Pinned</button><button class="tab" data-tab="archived">Archived</button></div>
+  <div class="body lib"></div>
+  <button class="btn fab" data-go="editor">New rule</button>
+  <div class="dlg"><div>
+   <!-- COPY SLOT: delete dialog. In use: blocked (Archive / Not now). Unused: confirm (Delete / Cancel). -->
+   <h3 class="dlg-h"></h3><p class="dlg-b"></p>
+   <button class="btn dlg-1"></button>
+   <button class="btn q dlg-2" data-dlg="close"></button>
+  </div></div>
+ </section>
+
+ <section class="scr" data-s="editor">
+  <div class="bar"></div>
+  <div class="top"><button class="ib" data-back aria-label="Back"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4l-6 6 6 6"/></svg></button><h2>New rule</h2></div>
+  <div class="body">
+   <div class="viz"><div class="ed"></div><div class="cap"></div></div>
+   <div class="chips"><button class="chip" data-t="pin">Pin first</button><button class="chip" data-t="repeat">Repeat</button><button class="chip on" data-t="every">Every N songs</button></div>
+   <div class="sent"></div>
+   <div class="hint helper">You pick the song when you add this rule to a mix.</div>
+  </div>
+  <div class="dock"><button class="btn sva">Save &amp; add to mix</button><button class="btn q sv">Save rule</button></div>
+ </section>
+</div>
+</template>
+<script>
+const SONGS=["Eye of the Tiger","Mr. Brightside","Lose Yourself","Stronger","Can't Hold Us","Till I Collapse","Power","Seven Nation Army","Uprising","Remember the Name","Thunderstruck","Titanium"];
+const BASE=SONGS.concat(["Believer","Numb","Sail","Kids","Levels","Heads Will Roll","The Pretender","Bring Me to Life"]);
+const COL=["#e8b04b","#7aa7ff","#e57a9a","#9ad08a","#c9a3f0"];const MAX=5;
+let RULES=[ // global, song-less
+ {id:1,t:"pin",n:1,pinned:true,arch:false,used:2},
+ {id:2,t:"every",n:4,pinned:false,arch:false,used:2},
+ {id:3,t:"repeat",n:2,pinned:false,arch:false,used:1},
+ {id:5,t:"every",n:6,pinned:false,arch:true,used:0},
+ {id:6,t:"repeat",n:3,pinned:false,arch:false,used:0}];
+const ESC=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+function sentence(r,pill){const N=pill?`<span class="pill num" data-k="n">${r.n}</span>`:`<b>${r.n}</b>`;
+ return {pin:"Play a song first",repeat:`Play a song ${N} times in a row`,every:`Play a song after every ${N} songs`}[r.t]}
+function caption(r){const N=r.n;
+ return {pin:"#01 · this song leads the mix",repeat:`${N}× · same song, in a row`,every:`every ${N} · lands after each ${N} songs`}[r.t]}
+function cardLine(r,song){return {pin:`Pin first · ${song}`,repeat:`Repeat · ${song} · ${r.n}×`,every:`Every ${r.n} · ${song}`}[r.t]}
+// entries: [{rule, song}] in priority order. Returns list of {s,c(ruleId)|0}
+function apply(base,ents,o){let b=base.slice();
+ if(!o.keep){let s=7;b=b.map(x=>[x,(s=(s*9301+49297)%233280)]).sort((a,c)=>a[1]-c[1]).map(a=>a[0])}
+ const rs=new Set(ents.filter(e=>e.song).map(e=>e.song));
+ let L=b.map(s=>({s,c:0,x:0}));if(o.rm)L=L.filter(x=>!rs.has(x.s));
+ const taken=new Set();
+ ents.forEach(({rule:r,song},i)=>{const id=i+1;
+  if(taken.has(song))return;taken.add(song); // top rule wins
+  if(r.t==="pin"){L=L.filter(x=>x.s!==song||x.c);L.unshift({s:song,c:id,x:0})}
+  else if(r.t==="every"){L=L.filter(x=>x.s!==song||x.c);const out=[];let c=0;L.forEach(x=>{out.push(x);if(!x.c){c++;if(c%r.n===0)out.push({s:song,c:id,x:0})}});L=out}
+  else{let at=L.findIndex(x=>x.s===song&&!x.c);if(at<0)at=Math.min(5,L.length);else L.splice(at,1);for(let j=0;j<r.n;j++)L.splice(at+j,0,{s:song,c:id,x:0,rep:1})}});
+ return L}
+// one SVG renderer for editor + preview. items: [{col|null, label, loop(N)}]
+function dotsSVG(items,cols){const gap=24,rh=52,x0=12,rows=Math.max(1,Math.ceil(items.length/cols)),W=x0*2+(cols-1)*gap;
+ const body=items.map((d,i)=>{const cx=x0+(i%cols)*gap,y=Math.floor(i/cols)*rh+30,col=d.col||"#4a4a4a";
+  let o=`<circle cx="${cx}" cy="${y}" r="7" fill="${col}"/>`;
+  if(d.label)o+=`<text x="${cx}" y="${y+19}" text-anchor="middle" fill="${col}" font-size="8" font-family="monospace">${d.label}</text>`;
+  if(d.loop)o+=`<path d="M${cx-4} ${y-6} C ${cx-16} ${y-28}, ${cx+16} ${y-28}, ${cx+4} ${y-7}" fill="none" stroke="${col}" stroke-width="1.5"/><path d="M${cx+4} ${y-7} l1 -6 M${cx+4} ${y-7} l-5 -3" stroke="${col}" stroke-width="1.5"/><text x="${cx+11}" y="${y-18}" fill="${col}" font-size="9" font-family="monospace">${d.loop}×</text>`;
+  return o}).join("");
+ return `<svg viewBox="0 0 ${W} ${rows*rh}">${body}</svg>`}
+function edItems(r){const W="#fff",it=[];
+ if(r.t==="pin"){it.push({col:W,label:"#01"});for(let i=0;i<10;i++)it.push({})}
+ else if(r.t==="every"){let c=0;while(it.length<11){it.push({});c++;if(c%r.n===0&&it.length<11)it.push({col:W})}}
+ else{for(let i=0;i<11;i++)it.push(i===4?{col:W,loop:r.n}:{})}
+ return it}
+function pvItems(L){const it=[];for(let i=0;i<L.length;i++){const x=L[i];
+  if(x.rep){let n=1;while(L[i+1]&&L[i+1].rep&&L[i+1].c===x.c){n++;i++}it.push({col:COL[x.c-1],label:"#"+x.c,loop:n})}
+  else it.push(x.c?{col:COL[x.c-1],label:"#"+x.c}:{})}
+ return it}
+const FULL=BASE.concat(Array.from({length:412-BASE.length},(_,i)=>"Track "+(i+BASE.length+1)));
+
+function mount(root,start){
+ const $=q=>root.querySelector(q),$$=q=>[...root.querySelectorAll(q)];
+ let hist=[],cur;const opt={keep:true,rm:false};let tab="active",draft,fromMix=false,delId=null,pending=null;
+ const R=id=>RULES.find(r=>r.id===id);
+ let mix=[{id:1,song:"Eye of the Tiger"},{id:2,song:"Mr. Brightside"},{id:3,song:"Lose Yourself"}];
+ const newDraft=()=>({t:"every",n:4});
+ function go(s){if(cur&&cur!==s)hist.push(cur);if(s==="editor"){fromMix=cur==="builder"||!!$(".rpick.on");$$(".sheet").forEach(x=>x.classList.remove("on"));draft=newDraft();renderEd()}
+  cur=s;$$(".scr").forEach(e=>e.classList.toggle("on",e.dataset.s===s));if(s==="builder")renderB();if(s==="library")renderL()}
+ function back(){const p=hist.pop()||"home";cur=null;go(p);hist.pop()}
+ root.addEventListener("click",e=>{const g=e.target.closest("[data-go]");if(g){go(g.dataset.go);return}
+  if(e.target.closest("[data-back]"))back();
+  const sh=e.target.closest(".sheet");if(sh&&e.target===sh)sh.classList.remove("on")});
+ // builder
+ function renderB(){$(".rules").innerHTML=mix.filter(m=>R(m.id)).map((m,i)=>{const r=R(m.id);return `<div class="rc" data-i="${i}"><span class="n">#0${i+1}</span><span class="dot" style="background:${COL[i]}"></span><div class="s"><b>${ESC(cardLine(r,m.song))}</b><div class="c">${ESC(caption(r))}</div></div><span class="hdl">⋮⋮</span></div>`}).join("")||`<div class="hint">No rules yet. Without one, you just get a copy.</div>`;renderPV()}
+ function renderPV(){$(".addr").style.display=mix.length>=MAX?"none":"block";const ents=mix.filter(m=>R(m.id)).map(m=>({rule:R(m.id),song:m.song}));const L=apply(FULL,ents,opt);
+  $(".sum").textContent=`${L.length} tracks · ${ents.length} rules applied`;
+  $(".pv").innerHTML=dotsSVG(pvItems(L).slice(0,22),13);$(".pv").setAttribute("aria-label",$(".sum").textContent)}
+ $$("[data-opt]").forEach(b=>b.onclick=()=>{opt[b.dataset.opt]=!opt[b.dataset.opt];b.classList.toggle("on");renderPV()});
+ let drag=null;
+ $(".rules").addEventListener("pointerdown",e=>{const c=e.target.closest(".rc");if(!c)return;drag={c,y:e.clientY,h:c.offsetHeight+6};c.classList.add("drag");c.setPointerCapture(e.pointerId)});
+ $(".rules").addEventListener("pointermove",e=>{if(!drag)return;let dy=e.clientY-drag.y;const cs=[...$(".rules").children],i=cs.indexOf(drag.c);
+  if(dy>drag.h/2&&i<cs.length-1){[mix[i],mix[i+1]]=[mix[i+1],mix[i]];cs[i+1].after(drag.c);drag.y+=drag.h;dy-=drag.h;renum()}
+  else if(dy<-drag.h/2&&i>0){[mix[i],mix[i-1]]=[mix[i-1],mix[i]];cs[i-1].before(drag.c);drag.y-=drag.h;dy+=drag.h;renum()}
+  drag.c.style.transform=`translateY(${dy}px)`});
+ const end=()=>{if(!drag)return;drag.c.classList.remove("drag");drag.c.style.transform="";drag=null;renderB()};
+ $(".rules").addEventListener("pointerup",end);$(".rules").addEventListener("pointercancel",end);
+ function renum(){[...$(".rules").children].forEach((c,i)=>c.querySelector(".n").textContent="#0"+(i+1));renderPV()}
+ // add rule flow: rule picker -> song picker
+ $(".addr").onclick=()=>{$(".rlist").innerHTML=RULES.filter(r=>!r.arch).map(r=>`<button class="pick" data-r="${r.id}"><span class="dot" style="background:#555"></span><span>${sentence(r)}<div class="c" style="font:11px var(--mono);color:var(--dim)">${ESC(caption(r))}</div></span></button>`).join("");$(".rpick").classList.add("on")};
+ $(".rlist").addEventListener("click",e=>{const b=e.target.closest("[data-r]");if(b){$(".rpick").classList.remove("on");addToMix(+b.dataset.r)}});
+ function addToMix(id){pending=id;$(".slist").innerHTML=SONGS.map(s=>`<button class="pick" data-song="${ESC(s)}"><div class="cover" style="width:40px;height:40px"><i></i><i></i><i></i><i></i></div>${ESC(s)}</button>`).join("");$(".spick").classList.add("on")}
+ $(".slist").addEventListener("click",e=>{const b=e.target.closest("[data-song]");if(!b)return;mix.push({id:pending,song:b.dataset.song});R(pending).used++;$(".spick").classList.remove("on");renderB()});
+ $(".gen").onclick=()=>{const t=$(".toast");t.textContent=`Saved "Rules: ${$(".name").value||"Gym"}" to Spotify. Play it with shuffle off.`;t.classList.add("on");setTimeout(()=>t.classList.remove("on"),2600);$(".gen").textContent="Regenerate"};
+ // library
+ function renderL(){const list=RULES.filter(r=>tab==="archived"?r.arch:tab==="pinned"?r.pinned&&!r.arch:!r.arch);
+  $(".lib").innerHTML=list.length?list.map(r=>`<div class="lr"><span class="dot" style="background:#555"></span><div class="s">${sentence(r)}<div style="font:11px var(--mono);color:var(--dim);margin-top:2px">${ESC(caption(r))}</div></div><button class="ib ov" data-id="${r.id}" aria-label="More">⋯</button><div class="menu" data-m="${r.id}"><button data-a="edit">Edit</button><button data-a="pin">Pin</button><button data-a="archive">Archive</button><button data-a="delete">Delete</button></div></div>`).join("")
+   :`<div class="empty"><h3>No rules yet</h3>No rules here. Make one once and use it in any mix.</div>`}
+ $$(".tab").forEach(b=>b.onclick=()=>{tab=b.dataset.tab;$$(".tab").forEach(x=>x.classList.toggle("on",x===b));renderL()});
+ $(".lib").addEventListener("click",e=>{const o=e.target.closest(".ov");if(o){const m=$(`[data-m="${o.dataset.id}"]`);const was=m.classList.contains("on");$$(".menu").forEach(x=>x.classList.remove("on"));if(!was)m.classList.add("on");return}
+  const a=e.target.closest("[data-a]");if(!a)return;const id=+a.parentNode.dataset.m,r=R(id);
+  if(a.dataset.a==="edit"){go("editor");fromMix=false;draft={...r};renderEd();$("[data-s=editor] h2").textContent="Edit rule";return}
+  if(a.dataset.a==="pin")r.pinned=!r.pinned;
+  if(a.dataset.a==="archive")r.arch=!r.arch;
+  if(a.dataset.a==="delete"){delId=id;const u=r.used,b1=$(".dlg-1");
+   if(u>0){$(".dlg-h").textContent=u===1?"Used in 1 mix":`Used in ${u} mixes`;
+    $(".dlg-b").textContent=u===1?"Remove it from that mix to delete it, or archive it now.":"Remove it from those mixes to delete it, or archive it now.";
+    b1.textContent="Archive";b1.dataset.dlg="archive";b1.className="btn dlg-1";$(".dlg-2").textContent="Not now"}
+   else{$(".dlg-h").textContent="Delete this rule?";$(".dlg-b").textContent="It isn't used in any mix.";
+    b1.textContent="Delete";b1.dataset.dlg="delete";b1.className="btn red dlg-1";$(".dlg-2").textContent="Cancel"}
+   $$(".menu").forEach(x=>x.classList.remove("on"));$(".dlg").classList.add("on");return}
+  renderL()});
+ $(".dlg").addEventListener("click",e=>{const b=e.target.closest("[data-dlg]");if(!b&&e.target!==$(".dlg"))return;const r=R(delId);
+  if(b&&b.dataset.dlg==="archive")r.arch=true;
+  if(b&&b.dataset.dlg==="delete"&&!r.used)RULES=RULES.filter(x=>x.id!==delId);
+  $(".dlg").classList.remove("on");renderL()});
+ // editor
+ function renderEd(){
+  $("[data-s=editor] h2").textContent=draft.id?"Edit rule":"New rule";$$(".chip").forEach(c=>c.classList.toggle("on",c.dataset.t===draft.t));
+  $(".sent").innerHTML=sentence(draft,true);$(".cap").textContent=caption(draft);$(".ed").innerHTML=dotsSVG(edItems(draft),11);
+  $(".sva").style.display=fromMix?"block":"none"}
+ $$(".chip").forEach(c=>c.onclick=()=>{draft.t=c.dataset.t;renderEd()});
+ $(".sent").addEventListener("click",e=>{if(e.target.closest(".pill")){draft.n=draft.n>=6?2:draft.n+1;renderEd()}});
+ function save(add){let id=draft.id;if(id)Object.assign(R(id),draft);else{id=Math.max(0,...RULES.map(r=>r.id))+1;RULES.push({...draft,id,pinned:false,arch:false,used:0})}
+  back();if(add&&fromMix&&cur==="builder")addToMix(id)}
+ $(".sva").onclick=()=>save(true);$(".sv").onclick=()=>save(false);
+ go(start);hist=start==="home"?[]:["home"];
+ return {go,setDraft:d=>{draft=d;renderEd()},delete:id=>{$(`.ov[data-id="${id}"]`).click();$(`[data-m="${id}"] [data-a="delete"]`).click()}};
+}
+const st=document.getElementById("stage"),tpl=document.getElementById("app"),H=location.hash;
+const starts=H==="#dialog"?["library"]:H==="#editor-repeat"?["editor"]:new URLSearchParams(location.search).get("s")?.split(",")||(innerWidth<=600?["builder"]:["signin","home","builder","library","editor"]);
+const apps=starts.map(s=>{const n=tpl.content.firstElementChild.cloneNode(true);st.appendChild(n);return mount(n,s)});
+if(H==="#dialog")apps[0].delete(2);
+if(H==="#editor-repeat")apps[0].setDraft({t:"repeat",n:2});
+if(!H&&apps[4])apps[4].setDraft({t:"repeat",n:2});
+if(H==="#preview"){const b=document.querySelector("[data-s=builder] .body");b.scrollTop=b.querySelector(".pv").offsetTop-330}
+</script></body></html>

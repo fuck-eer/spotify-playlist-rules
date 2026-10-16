@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>rulemix · DSN-20261016-playlist-rules</title>
+<style>
+:root{--bg:#121212;--s1:#181818;--s2:#242424;--s3:#2e2e2e;--line:#333;--tx:#fff;--mut:#b3b3b3;--dim:#7a7a7a;--g:#1DB954;
+--r1:#e8b04b;--r2:#7aa7ff;--r3:#e57a9a;--r4:#9ad08a;--mono:ui-monospace,SFMono-Regular,Menlo,monospace;--ease:cubic-bezier(.2,.7,.2,1)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a0a;color:var(--tx);font:14px/1.4 -apple-system,"Helvetica Neue",Inter,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.stage{display:flex;gap:28px;justify-content:center;padding:40px 24px;flex-wrap:nowrap}
+.phone{width:360px;height:760px;flex:none;border-radius:44px;background:var(--bg);border:10px solid #000;box-shadow:0 0 0 1px #2a2a2a;position:relative;overflow:hidden}
+@media (max-width:600px){.stage{padding:0}.phone:not(:first-child){display:none}.phone{width:100vw;height:100vh;border:0;border-radius:0}}
+@media (min-width:601px) and (max-width:1900px){.stage{zoom:.72}}
+.scr{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;transform:translateX(16px);pointer-events:none;transition:opacity .2s var(--ease),transform .2s var(--ease)}
+.scr.on{opacity:1;transform:none;pointer-events:auto}
+.bar{height:40px;flex:none}
+.top{display:flex;align-items:center;gap:10px;padding:6px 16px 10px}
+.top h1{font-size:26px;font-weight:800;letter-spacing:-.02em;flex:1}
+.top h2{font-size:17px;font-weight:700;flex:1}
+.ib{width:38px;height:38px;border-radius:50%;background:var(--s2);border:0;color:var(--tx);display:grid;place-items:center;cursor:pointer}
+.ib svg{width:18px;height:18px}
+.body{flex:1;overflow-y:auto;padding:0 16px 130px;scrollbar-width:none}
+.lbl{font:600 11px var(--mono);letter-spacing:.12em;color:var(--mut);margin:20px 0 8px}
+.hint{color:var(--dim);font-size:12px;margin-top:6px}
+.btn{border:0;border-radius:999px;font-weight:700;font-size:15px;padding:14px 20px;cursor:pointer;color:#000;background:#fff}
+.btn.g{background:var(--g)}.btn.q{background:transparent;color:var(--tx);border:1px solid #555}
+.btn.sm{padding:9px 16px;font-size:13px}
+.cover{width:56px;height:56px;border-radius:4px;flex:none;display:grid;grid-template-columns:1fr 1fr;overflow:hidden}
+.cover i{display:block}
+.row{display:flex;align-items:center;gap:12px;padding:8px 0}
+.row .t{font-weight:600}.row .m{color:var(--mut);font-size:12px}
+/* sign in */
+.sign{justify-content:center;align-items:center;text-align:center;padding:32px}
+.wm{display:flex;align-items:center;gap:10px;font-size:34px;font-weight:800;letter-spacing:-.03em}
+.mark{display:grid;grid-template-columns:repeat(3,9px);gap:3px}.mark i{height:9px;border-radius:2px;background:#fff}.mark i.o{background:#555}
+.sign p{color:var(--mut);margin:14px 0 40px;font-size:16px;max-width:260px}
+.sign .note{font:11px var(--mono);color:var(--dim);margin-top:18px;max-width:260px}
+/* home */
+.mix{display:flex;gap:12px;align-items:center;background:var(--s1);border-radius:8px;padding:10px;margin-bottom:8px;cursor:pointer}
+.mix .t{font-weight:700;font-size:15px}.mix .m{color:var(--mut);font-size:12px;margin-top:2px}
+.fab{position:absolute;right:16px;bottom:24px}
+/* builder */
+.name{width:100%;background:transparent;border:0;border-bottom:1px solid var(--line);color:var(--tx);font-size:24px;font-weight:800;padding:6px 0;outline:none}
+.src{display:flex;gap:12px;align-items:center;background:var(--s1);border-radius:8px;padding:10px;cursor:pointer}
+.rules{position:relative}
+.rc{display:flex;align-items:center;gap:12px;background:var(--s1);border-radius:8px;padding:12px;margin-bottom:6px;user-select:none;touch-action:none;transition:transform .2s var(--ease),box-shadow .2s}
+.rc.drag{transition:none;z-index:5;box-shadow:0 10px 30px #000a;background:var(--s2)}
+.rc .n{font:700 13px var(--mono);width:26px;color:var(--mut)}
+.rc .s{flex:1;font-size:14px}.rc .s b{font-weight:600}
+.rc .c{font:11px var(--mono);color:var(--dim);margin-top:2px}
+.dot{width:8px;height:8px;border-radius:2px;flex:none}
+.hdl{cursor:grab;color:var(--dim);padding:4px}
+.add{width:100%;background:transparent;border:1px dashed #444;color:var(--mut);border-radius:8px;padding:12px;font-weight:600;cursor:pointer}
+.tg{display:flex;align-items:flex-start;gap:12px;padding:10px 0}
+.tg>div{flex:1}.tg .t{font-weight:600}
+.sw{width:40px;height:24px;border-radius:12px;background:#555;position:relative;cursor:pointer;flex:none;border:0;transition:background .2s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s var(--ease)}
+.sw.on{background:#fff}.sw.on::after{transform:translateX(16px);background:#000}
+.strip{display:flex;flex-wrap:wrap;gap:4px}
+.tile{width:38px;height:44px;border-radius:4px;background:var(--s2);font:10px var(--mono);color:var(--dim);display:flex;flex-direction:column;justify-content:space-between;padding:4px;transition:transform .2s var(--ease),opacity .2s;position:relative}
+.tile b{font-weight:700;font-size:9px;color:#000;align-self:flex-end;border-radius:2px;padding:0 2px}
+.tile.ru{color:#000}
+.sum{font:12px var(--mono);color:var(--mut);margin-bottom:8px}
+.dock{position:absolute;left:0;right:0;bottom:0;padding:14px 16px 26px;background:var(--bg);border-top:1px solid var(--line)}
+.dock .btn{width:100%}
+.toast{position:absolute;left:16px;right:16px;bottom:96px;background:#fff;color:#000;border-radius:8px;padding:12px 14px;font-weight:600;font-size:13px;opacity:0;transform:translateY(8px);transition:.2s var(--ease);pointer-events:none}
+.toast.on{opacity:1;transform:none}
+/* library */
+.tabs{display:flex;gap:8px;padding:0 16px 8px}
+.tab{background:var(--s2);border:0;color:var(--tx);border-radius:999px;padding:7px 14px;font-size:13px;cursor:pointer}
+.tab.on{background:#fff;color:#000;font-weight:600}
+.lr{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #222;position:relative}
+.lr .s{flex:1}
+.menu{position:absolute;right:0;top:44px;background:var(--s3);border-radius:6px;padding:4px;z-index:9;display:none;min-width:140px;box-shadow:0 10px 30px #000a}
+.menu.on{display:block}.menu button{display:block;width:100%;text-align:left;background:none;border:0;color:var(--tx);padding:10px 12px;font-size:14px;cursor:pointer;border-radius:4px}
+.menu button:hover{background:#3a3a3a}
+.empty{color:var(--mut);text-align:center;padding:40px 10px}
+.empty h3{color:var(--tx);font-size:18px;margin-bottom:6px}
+.dlg{position:absolute;inset:0;background:#000b;display:none;align-items:flex-end;z-index:20}
+.dlg.on{display:flex}
+.dlg>div{background:var(--s2);width:100%;border-radius:16px 16px 0 0;padding:24px 20px 32px}
+.dlg h3{font-size:18px;margin-bottom:6px}.dlg p{color:var(--mut);margin-bottom:20px}
+.dlg .btn{width:100%;margin-top:8px}.btn.red{background:transparent;color:#f15e6c;border:1px solid #f15e6c}
+/* editor */
+.viz{background:var(--s1);border-radius:10px;padding:14px 12px;margin-top:4px}
+.viz .strip{flex-wrap:nowrap;overflow:hidden;justify-content:space-between}
+.viz .tile{width:34px;height:40px;flex:none}
+.cap{font:12px var(--mono);color:var(--mut);margin-top:10px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{background:var(--s2);border:1px solid transparent;color:var(--tx);border-radius:999px;padding:8px 14px;font-size:13px;cursor:pointer}
+.chip.on{border-color:#fff}
+.sent{font-size:22px;font-weight:700;line-height:1.9;margin-top:6px}
+.pill{display:inline-block;background:var(--s3);border-radius:999px;padding:0 12px;line-height:34px;cursor:pointer;border:1px solid #444}
+.pill.num{font-family:var(--mono)}
+.err{color:#f15e6c;font-size:12px;margin-top:8px;display:none}
+.dock .btn+.btn{margin-top:8px}
+</style></head><body>
+<div class="stage" id="stage"></div>
+
+<template id="app">
+<div class="phone">
+ <!-- 1 SIGN IN -->
+ <section class="scr sign" data-s="signin">
+  <div class="wm"><span class="mark"><i></i><i class="o"></i><i class="o"></i><i class="o"></i><i></i><i class="o"></i><i class="o"></i><i class="o"></i><i></i></span>rulemix</div>
+  <p>Your playlist, your order. Spotify just plays it.</p>
+  <button class="btn" data-go="home">Continue with Spotify</button>
+  <div class="note">Dev mode: access is limited to the owner and 4 friends.</div>
+ </section>
+
+ <!-- 2 HOME -->
+ <section class="scr" data-s="home">
+  <div class="bar"></div>
+  <div class="top"><h1>Mixes</h1>
+   <button class="ib" data-go="library" aria-label="Rules"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 5h10M7 10h10M7 15h10"/><text x="1" y="7" font-size="6" fill="currentColor" stroke="none" font-family="monospace">1</text><text x="1" y="12" font-size="6" fill="currentColor" stroke="none" font-family="monospace">2</text><text x="1" y="17" font-size="6" fill="currentColor" stroke="none" font-family="monospace">3</text></svg></button></div>
+  <div class="body">
+   <div class="mix" data-go="builder"><div class="cover"><i></i><i></i><i></i><i></i></div><div><div class="t">Gym</div><div class="m">Liked Songs · 3 rules · 2h ago</div></div></div>
+   <div class="mix" data-go="builder"><div class="cover"><i></i><i></i><i></i><i></i></div><div><div class="t">Late drive</div><div class="m">Liked Songs · 3 rules · not generated</div></div></div>
+  </div>
+  <button class="btn fab" data-go="builder">New mix</button>
+ </section>
+
+ <!-- 3 BUILDER -->
+ <section class="scr" data-s="builder">
+  <div class="bar"></div>
+  <div class="top"><button class="ib" data-go="home" aria-label="Back"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4l-6 6 6 6"/></svg></button><h2></h2>
+   <button class="ib" data-go="library" aria-label="Rules"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 5h10M7 10h10M7 15h10M2 5h2M2 10h2M2 15h2"/></svg></button></div>
+  <div class="body">
+   <input class="name" placeholder="Name this mix" value="Gym">
+   <div class="lbl">SOURCE</div>
+   <div class="src"><div class="cover"><i></i><i></i><i></i><i></i></div><div style="flex:1"><div style="font-weight:600">Liked Songs · 412 songs</div></div><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#b3b3b3" stroke-width="2"><path d="M8 4l6 6-6 6"/></svg></div>
+   <div class="hint">Discover Weekly and other Spotify-made lists need a copy in your library first.</div>
+   <div class="lbl">RULES</div>
+   <div class="rules"></div>
+   <button class="add" data-go="editor">+ Add rule</button>
+   <div class="hint">Drag to reorder. The top rule wins a conflict.</div>
+   <div class="lbl">PREVIEW</div>
+   <div class="sum"></div>
+   <div class="strip pv"></div>
+   <div class="lbl">OPTIONS</div>
+   <div class="tg"><div><div class="t">Keep base order</div><div class="hint">Off reshuffles the base list once before rules run.</div></div><button class="sw on" data-opt="keep"></button></div>
+   <div class="tg"><div><div class="t">Remove rule songs from base</div><div class="hint">Rule songs only play where a rule puts them.</div></div><button class="sw" data-opt="rm"></button></div>
+  </div>
+  <div class="toast"></div>
+  <div class="dock"><button class="btn g gen">Generate playlist</button></div>
+ </section>
+
+ <!-- 4 LIBRARY -->
+ <section class="scr" data-s="library">
+  <div class="bar"></div>
+  <div class="top"><button class="ib" data-back aria-label="Back"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4l-6 6 6 6"/></svg></button><h1>Rules</h1></div>
+  <div class="tabs"><button class="tab on" data-tab="active">Active</button><button class="tab" data-tab="pinned">Pinned</button><button class="tab" data-tab="archived">Archived</button></div>
+  <div class="body lib"></div>
+  <button class="btn fab" data-go="editor">New rule</button>
+  <div class="dlg"><div>
+   <!-- COPY SLOT: delete dialog. In use: blocked (Archive / Not now). Unused: confirm (Delete / Cancel). -->
+   <h3 class="dlg-h"></h3>
+   <p class="dlg-b"></p>
+   <button class="btn dlg-1"></button>
+   <button class="btn q dlg-2" data-dlg="close"></button>
+  </div></div>
+ </section>
+
+ <!-- 5 EDITOR -->
+ <section class="scr" data-s="editor">
+  <div class="bar"></div>
+  <div class="top"><button class="ib" data-back aria-label="Back"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4l-6 6 6 6"/></svg></button><h2>New rule</h2></div>
+  <div class="body">
+   <div class="viz"><div class="strip ed"></div><div class="cap"></div></div>
+   <div class="lbl">&nbsp;</div>
+   <div class="chips"><button class="chip" data-t="pin">Pin first</button><button class="chip on" data-t="every">Every N songs</button><button class="chip" data-t="repeat">Repeat</button></div>
+   <div class="sent"></div>
+   <div class="err">Pick a song and a number above 0.</div>
+  </div>
+  <div class="dock"><button class="btn sva">Save &amp; add to mix</button><button class="btn q sv">Save rule</button></div>
+ </section>
+</div>
+</template>
+
+<script>
+const SONGS=["Eye of the Tiger","Mr. Brightside","Lose Yourself","Stronger","Can't Hold Us","Till I Collapse","Power","Seven Nation Army","Uprising","Remember the Name","Thunderstruck","Titanium"];
+const BASE=SONGS.slice(0,12).concat(["Believer","Numb","Sail","Kids","Levels","Heads Will Roll","The Pretender","Bring Me to Life"]);
+const COL=["var(--r1)","var(--r2)","var(--r3)","var(--r4)"];const RC=id=>COL[(id-1)%4];
+let RULES=[ // global library
+ {id:1,t:"pin",song:"Eye of the Tiger",n:1,pinned:true,arch:false,used:2},
+ {id:2,t:"every",song:"Mr. Brightside",n:4,pinned:false,arch:false,used:2},
+ {id:3,t:"repeat",song:"Lose Yourself",n:2,pinned:false,arch:false,used:1},
+ {id:4,t:"every",song:"Titanium",n:6,pinned:false,arch:true,used:0},
+ {id:5,t:"repeat",song:"Stronger",n:3,pinned:false,arch:false,used:0}];
+const ESC=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+function sentence(r,pills){const p=(v,k,num)=>pills?`<span class="pill${num?' num':''}" data-k="${k}">${ESC(String(v))}</span>`:`<b>${ESC(String(v))}</b>`;
+ if(r.t==="pin")return `Play ${p(r.song,"song")} first.`;
+ if(r.t==="every")return `Play ${p(r.song,"song")} after every ${p(r.n,"n",1)} songs.`;
+ return `Play ${p(r.song,"song")} ${p(r.n,"n",1)} times.`}
+function caption(r){const N=r.n;
+ if(r.t==="pin")return "#01 · always track one";
+ if(r.t==="every")return `every ${N} · after tracks ${N}, ${2*N}, ${3*N}…`;
+ return `×${N} · plays back to back`; /* COPY SLOT: Repeat caption (Copywriter final) */}
+function apply(base,rules,o){let b=base.slice();
+ if(!o.keep){let s=7;b=b.map((x,i)=>[x,(s=(s*9301+49297)%233280)]).sort((a,c)=>a[1]-c[1]).map(a=>a[0])}
+ let L=b.map(s=>({s,r:0}));const rs=new Set(rules.map(r=>r.song));
+ if(o.rm)L=L.filter(x=>!rs.has(x.s));
+ const taken=new Set();
+ rules.forEach((r,i)=>{const k=i+1;if(taken.has(r.song))return;taken.add(r.song); // top rule wins
+  if(r.t==="pin"){L=L.filter(x=>x.s!==r.song);L.unshift({s:r.song,r:k,c:r.id})}
+  else if(r.t==="every"){L=L.filter(x=>x.s!==r.song||x.r);const o=[];let c=0;L.forEach(x=>{o.push(x);if(!x.r){c++;if(c%r.n===0)o.push({s:r.song,r:k,c:r.id})}});L=o}
+  else{let at=L.findIndex(x=>x.s===r.song&&!x.r);if(at<0)at=Math.min(5,L.length);else L.splice(at,1);for(let j=0;j<r.n;j++)L.splice(at+j,0,{s:r.song,r:k,c:r.id})}});
+ return L}
+
+function mount(root,start){
+ const $=q=>root.querySelector(q),$$=q=>[...root.querySelectorAll(q)];
+ let hist=[],cur;const mixRules=[1,2,3];const opt={keep:true,rm:false};let tab="active",draft={t:"every",song:"Mr. Brightside",n:4},fromMix=false,delId=null,generated=false;
+ function go(s){if(cur&&cur!==s)hist.push(cur);if(s==="editor"){fromMix=cur==="builder";draft={t:"every",song:"Mr. Brightside",n:4};renderEd()}
+  cur=s;$$(".scr").forEach(e=>e.classList.toggle("on",e.dataset.s===s));if(s==="builder")renderB();if(s==="library")renderL()}
+ function back(){const p=hist.pop()||"home";cur=null;go(p);hist.pop()}
+ root.addEventListener("click",e=>{const g=e.target.closest("[data-go]");if(g){go(g.dataset.go);return}
+  if(e.target.closest("[data-back]"))back()});
+ const R=id=>RULES.find(r=>r.id===id);
+ // builder
+ function renderB(){const box=$(".rules");box.innerHTML=mixRules.map((id,i)=>{const r=R(id);return `<div class="rc" data-id="${id}"><span class="n">#0${i+1}</span><span class="dot" style="background:${RC(id)}"></span><div class="s">${sentence(r)}<div class="c">${caption(r)}</div></div><span class="hdl">⋮⋮</span></div>`}).join("")||`<div class="hint">No rules yet. Without one, you just get a copy.</div>`;
+  renderPV()}
+ function renderPV(){const rs=mixRules.map(R);const L=apply(BASE,rs,opt);
+  $(".sum").textContent=`${L.length} tracks · ${rs.length} rules applied`;
+  $(".pv").innerHTML=L.map((x,i)=>`<div class="tile${x.r?' ru':''}" title="${ESC(x.s)}" style="${x.r?`background:${RC(x.c)}`:''}">${String(i+1).padStart(2,"0")}${x.r?`<b>#${x.r}</b>`:''}</div>`).join("")}
+ $$("[data-opt]").forEach(b=>b.onclick=()=>{opt[b.dataset.opt]=!opt[b.dataset.opt];b.classList.toggle("on");renderPV()});
+ // drag reorder
+ let drag=null;
+ $(".rules").addEventListener("pointerdown",e=>{const c=e.target.closest(".rc");if(!c)return;drag={c,y:e.clientY,h:c.offsetHeight+6};c.classList.add("drag");c.setPointerCapture(e.pointerId)});
+ $(".rules").addEventListener("pointermove",e=>{if(!drag)return;let dy=e.clientY-drag.y;const cs=[...$(".rules").children],i=cs.indexOf(drag.c);
+  if(dy>drag.h/2&&i<cs.length-1){[mixRules[i],mixRules[i+1]]=[mixRules[i+1],mixRules[i]];cs[i+1].after(drag.c);drag.y+=drag.h;dy-=drag.h;renumber()}
+  else if(dy<-drag.h/2&&i>0){[mixRules[i],mixRules[i-1]]=[mixRules[i-1],mixRules[i]];cs[i-1].before(drag.c);drag.y-=drag.h;dy+=drag.h;renumber()}
+  drag.c.style.transform=`translateY(${dy}px)`});
+ const end=()=>{if(!drag)return;drag.c.classList.remove("drag");drag.c.style.transform="";drag=null;renderB()};
+ $(".rules").addEventListener("pointerup",end);$(".rules").addEventListener("pointercancel",end);
+ function renumber(){[...$(".rules").children].forEach((c,i)=>{c.querySelector(".n").textContent="#0"+(i+1)});renderPVlite()}
+ function renderPVlite(){renderPV()}
+ $(".gen").onclick=()=>{const t=$(".toast");t.textContent=`Saved "Rules: ${$(".name").value||"Gym"}" to Spotify. Play it with shuffle off.`;t.classList.add("on");setTimeout(()=>t.classList.remove("on"),2600);generated=true;$(".gen").textContent="Regenerate"};
+ // library
+ function renderL(){const list=RULES.filter(r=>tab==="archived"?r.arch:tab==="pinned"?r.pinned&&!r.arch:!r.arch);
+  $(".lib").innerHTML=list.length?list.map(r=>`<div class="lr"><span class="dot" style="background:${RC(r.id)}"></span><div class="s">${sentence(r)}<div class="rc" style="all:unset"><div class="c" style="font:11px var(--mono);color:var(--dim)">${caption(r)}</div></div></div><button class="ib ov" data-id="${r.id}" aria-label="More">⋯</button><div class="menu" data-m="${r.id}"><button data-a="edit">Edit</button><button data-a="pin">Pin</button><button data-a="archive">Archive</button><button data-a="delete">Delete</button></div></div>`).join("")
+   :`<div class="empty"><h3>No rules yet</h3>No rules here. Make one once and use it in any mix.</div>`}
+ $$(".tab").forEach(b=>b.onclick=()=>{tab=b.dataset.tab;$$(".tab").forEach(x=>x.classList.toggle("on",x===b));renderL()});
+ $(".lib").addEventListener("click",e=>{const o=e.target.closest(".ov");if(o){const m=$(`[data-m="${o.dataset.id}"]`);const was=m.classList.contains("on");$$(".menu").forEach(x=>x.classList.remove("on"));if(!was)m.classList.add("on");return}
+  const a=e.target.closest("[data-a]");if(!a)return;const id=+a.parentNode.dataset.m,r=R(id);
+  if(a.dataset.a==="edit"){go("editor");draft={...r};renderEd();$("[data-s=editor] h2").textContent="Edit rule";return}
+  if(a.dataset.a==="pin")r.pinned=!r.pinned;
+  if(a.dataset.a==="archive")r.arch=!r.arch;
+  if(a.dataset.a==="delete"){delId=id;const u=r.used,b1=$(".dlg-1");
+   if(u>0){$(".dlg-h").textContent=u===1?"Used in 1 mix":`Used in ${u} mixes`;
+    $(".dlg-b").textContent=u===1?"Remove it from that mix to delete it, or archive it now.":"Remove it from those mixes to delete it, or archive it now.";
+    b1.textContent="Archive";b1.dataset.dlg="archive";b1.className="btn dlg-1";$(".dlg-2").textContent="Not now"}
+   else{$(".dlg-h").textContent="Delete this rule?";$(".dlg-b").textContent="It isn't used in any mix.";
+    b1.textContent="Delete";b1.dataset.dlg="delete";b1.className="btn red dlg-1";$(".dlg-2").textContent="Cancel"}
+   $$(".menu").forEach(x=>x.classList.remove("on"));$(".dlg").classList.add("on");return}
+  renderL()});
+ $(".dlg").addEventListener("click",e=>{const b=e.target.closest("[data-dlg]");if(!b&&e.target!==$(".dlg"))return;const r=R(delId);
+  if(b&&b.dataset.dlg==="archive")r.arch=true;
+  if(b&&b.dataset.dlg==="delete"&&!r.used){RULES=RULES.filter(x=>x.id!==delId);const k=mixRules.indexOf(delId);if(k>-1)mixRules.splice(k,1)}
+  $(".dlg").classList.remove("on");renderL()});
+ // editor
+ function renderEd(){$("[data-s=editor] h2").textContent="New rule";$$(".chip").forEach(c=>c.classList.toggle("on",c.dataset.t===draft.t));
+  $(".sent").innerHTML=sentence(draft,true);$(".cap").textContent=caption(draft);
+  const L=apply(BASE.filter(s=>s!==draft.song).slice(0,9),[{...draft}],{keep:true,rm:true}).slice(0,8);const eid=draft.id||Math.max(0,...RULES.map(r=>r.id))+1;
+  $(".ed").innerHTML=L.map((x,i)=>`<div class="tile${x.r?' ru':''}" style="${x.r?`background:${RC(eid)}`:''}">${String(i+1).padStart(2,"0")}${x.r?`<b>#${eid}</b>`:''}</div>`).join("")}
+ $$(".chip").forEach(c=>c.onclick=()=>{draft.t=c.dataset.t;if(draft.t==="repeat"&&draft.n>5)draft.n=3;renderEd()});
+ $(".sent").addEventListener("click",e=>{const p=e.target.closest(".pill");if(!p)return;
+  if(p.dataset.k==="song")draft.song=SONGS[(SONGS.indexOf(draft.song)+1)%SONGS.length];else draft.n=draft.n>=6?2:draft.n+1;renderEd()});
+ function save(add){const ok=draft.song&&draft.n>0;$(".err").style.display=ok?"none":"block";if(!ok)return;
+  const id=Math.max(0,...RULES.map(r=>r.id))+1;RULES.push({...draft,id,pinned:false,arch:false,used:add?1:0});if(add&&fromMix)mixRules.push(id);back()}
+ $(".sva").onclick=()=>save(true);$(".sv").onclick=()=>save(false);
+ go(start);hist=start==="home"?[]:["home"];
+}
+const covers=`.cover{background:var(--s2)}.cover i:nth-child(1),.cover i:nth-child(4){background:#3a3a3a}`;
+document.head.insertAdjacentHTML("beforeend",`<style>${covers}</style>`);
+const st=document.getElementById("stage"),tpl=document.getElementById("app");
+const starts=location.hash==="#dialog"?["library"]:new URLSearchParams(location.search).get("s")?.split(",")||(innerWidth<=600?["builder"]:["signin","home","builder","library","editor"]);
+starts.forEach(s=>{const n=tpl.content.firstElementChild.cloneNode(true);st.appendChild(n);mount(n,s)});
+if(location.hash==="#dialog"){const ph=document.querySelector(".phone");ph.querySelector('.ov[data-id="2"]').click();ph.querySelector('[data-m="2"] [data-a="delete"]').click()}
+if(location.hash==="#preview"){const b=document.querySelector("[data-s=builder] .body");b.scrollTop=b.querySelector(".pv").offsetTop-260}
+</script></body></html>
