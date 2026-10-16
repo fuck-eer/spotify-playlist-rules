@@ -3,7 +3,7 @@
 - **Rule**: a reusable, song-less intent in the global rule library: an action type plus its parameters (e.g. "play N times"). Gets a song only when added to a Mix. A Rule used by any Mix can't be deleted, only archived.
 - **Mix**: a session: a Source playlist + a Rule Set + options (base order, seed), producing one Target playlist. Max rules set by MAX_RULES_PER_MIX (default 10, ADR-0017). One Target playlist per Mix (ADR-0015).
 - **Rule Set**: the ordered list of Rules in a Mix, each bound to a song from the Source. Order = priority (earlier wins; see ADR-0006).
-- **Base list**: the Source tracks minus the Removed list (rule songs are no longer removed: ADR-0027, superseding ADR-0005), ordered by the Manual order if set (ADR-0028), otherwise by the base order mode (ADR-0004). Rules are applied on top of it.
+- **Base list**: the Source tracks minus the Bench (rule songs are no longer removed: ADR-0027, superseding ADR-0005), ordered by the Manual order if set (ADR-0028), otherwise by the base order mode (ADR-0004). Rules are applied on top of it.
 - **Source playlist**: the input: an owned or collaborative playlist, or Liked Songs. Spotify-made and other users' playlists aren't readable.
 - **Target playlist**: the private playlist the app writes, named `Rules: <name>`. Created once, overwritten on each regeneration. Played with shuffle off. Tracked by ID, so renaming in Spotify is safe; recreated on Save if deleted (ADR-0016).
 - **Pin first**: rule placing its song at slot 1.
@@ -21,4 +21,5 @@
 - **Original song**: a song that comes from the Source playlist. Shown with a grey outer ring. The only kind of song that can be dragged to reorder (ADR-0028). It stays in the list when a rule targets it (ADR-0027).
 - **Rule copy**: an extra copy of a song added by a rule (Start with, Insert every N, Repeat). Shown with a ring in its rule's colour. Keeps its slot; can't be reordered, only trashed (ADR-0029, ADR-0030). Survives removal of its Original song.
 - **Manual order**: the user's dragged order of Original songs, saved per Mix on the server and synced web/Android. Replaces the seeded order; cleared by Reshuffle (ADR-0028).
-- **Removed list**: the Original songs a user trashed from a Mix. They stay removed across Reshuffle until restored from this list. Saved per Mix (ADR-0030).
+- **Bench**: the songs a user trashed from a Mix (FIFA team-management metaphor). Kept in the Mix's data but not played. Shown as a cluster of free nodes in the bottom-right corner of the graph, off the line; tap to open; drag an Original song back onto the line to restore it at that spot. A benched Rule copy keeps its rule colour and snaps back to its rule's slot (assumed, pending confirmation). Stays benched across Reshuffle. Saved per Mix (ADR-0030). Songs deleted from the Spotify Source are dropped, not benched. _Alias (older docs): Removed list._
+- **Source sync**: how a Mix reacts to Source playlist changes: new songs appended at the end of the line; deleted songs dropped entirely (not benched); Rule copies kept (ADR-0028, ADR-0030).
