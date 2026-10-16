@@ -19,7 +19,7 @@ export async function POST(
     if (!(await getMix(sql, user.id, id))) {
       throw new HttpError(404, "not_found", "That mix doesn't exist.");
     }
-    const running = await getRunningRun(sql, id);
+    const running = await getRunningRun(sql, user.id, id);
     if (running) {
       return Response.json(
         {
@@ -29,7 +29,8 @@ export async function POST(
         { status: 409 },
       );
     }
-    const run = await startRun(sql, id);
+    const run = await startRun(sql, user.id, id);
+    if (!run) throw new HttpError(404, "not_found", "That mix doesn't exist.");
     after(() => performSave(sql, user.id, id, run.id, spotifyForUser(sql, user.id)));
     return Response.json({ runId: run.id }, { status: 202 });
   } catch (e) {

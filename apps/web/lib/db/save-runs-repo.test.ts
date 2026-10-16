@@ -29,7 +29,7 @@ describe.skipIf(!reachable)("save runs repo", () => {
   });
 
   it("runs through its lifecycle", async () => {
-    const run = await startRun(sql, mixId);
+    const run = (await startRun(sql, user, mixId))!;
     expect(run).toMatchObject({
       mixId,
       status: "running",
@@ -42,17 +42,17 @@ describe.skipIf(!reachable)("save runs repo", () => {
       error: null,
       finishedAt: null,
     });
-    expect((await getRunningRun(sql, mixId))?.id).toBe(run.id);
+    expect((await getRunningRun(sql, user, mixId))?.id).toBe(run.id);
 
-    await updateRun(sql, run.id, { phase: "writing", done: 100, total: 250 });
+    await updateRun(sql, user, run.id, { phase: "writing", done: 100, total: 250 });
     expect(await getRun(sql, user, mixId, run.id)).toMatchObject({
       phase: "writing",
       done: 100,
       total: 250,
     });
 
-    await updateRun(sql, run.id, { tracksWritten: 250, recreated: true, retries429: 1 });
-    await finishRun(sql, run.id, { status: "succeeded" });
+    await updateRun(sql, user, run.id, { tracksWritten: 250, recreated: true, retries429: 1 });
+    await finishRun(sql, user, run.id, { status: "succeeded" });
     const done = await getRun(sql, user, mixId, run.id);
     expect(done).toMatchObject({
       status: "succeeded",
@@ -62,20 +62,35 @@ describe.skipIf(!reachable)("save runs repo", () => {
       retries429: 1,
     });
     expect(done?.finishedAt).not.toBeNull();
-    expect(await getRunningRun(sql, mixId)).toBeNull();
+    expect(await getRunningRun(sql, user, mixId)).toBeNull();
   });
 
   it("records a failure message", async () => {
-    const run = await startRun(sql, mixId);
-    await finishRun(sql, run.id, { status: "failed", error: "Nope." });
+    const run = (await startRun(sql, user, mixId))!;
+    await finishRun(sql, user, run.id, { status: "failed", error: "Nope." });
     expect(await getRun(sql, user, mixId, run.id)).toMatchObject({
       status: "failed",
       error: "Nope.",
     });
   });
 
+  it("every write and read is scoped to the mix owner", async () => {
+    const other = (await insertTestUser(sql)).id;
+    expect(await startRun(sql, other, mixId)).toBeNull();
+    const run = (await startRun(sql, user, mixId))!;
+    expect(await getRunningRun(sql, other, mixId)).toBeNull();
+    await updateRun(sql, other, run.id, { phase: "writing", done: 5 });
+    await finishRun(sql, other, run.id, { status: "failed", error: "x" });
+    expect(await getRun(sql, user, mixId, run.id)).toMatchObject({
+      status: "running",
+      phase: "reading",
+      done: 0,
+      error: null,
+    });
+  });
+
   it("getRun is scoped to the mix owner and the mix", async () => {
-    const run = await startRun(sql, mixId);
+    const run = (await startRun(sql, user, mixId))!;
     const other = (await insertTestUser(sql)).id;
     expect(await getRun(sql, other, mixId, run.id)).toBeNull();
     const otherMix = (

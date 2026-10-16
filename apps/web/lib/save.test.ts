@@ -30,7 +30,7 @@ describe.skipIf(!reachable)("performSave", () => {
       dbTokenStore(sql, FAKE_ME),
     );
   async function save() {
-    const run = await startRun(sql, mixId);
+    const run = (await startRun(sql, FAKE_ME, mixId))!;
     await performSave(sql, FAKE_ME, mixId, run.id, client());
     return (await getRun(sql, FAKE_ME, mixId, run.id))!;
   }

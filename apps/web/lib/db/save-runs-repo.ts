@@ -55,21 +55,40 @@ function toRow(r: DbRow): SaveRunRow {
   };
 }
 
-export async function startRun(sql: postgres.Sql, mixId: string): Promise<SaveRunRow> {
+/** Starts a run on the user's Mix; null when the Mix isn't theirs. */
+export async function startRun(
+  sql: postgres.Sql,
+  userId: string,
+  mixId: string,
+): Promise<SaveRunRow | null> {
+  if (!UUID.test(mixId)) return null;
   const [r] = await sql<DbRow[]>`
-    insert into save_runs as sr (mix_id) values (${mixId}) returning ${sql.unsafe(COLS)}`;
-  return toRow(r!);
+    insert into save_runs as sr (mix_id)
+    select m.id from mixes m where m.id = ${mixId} and m.user_id = ${userId}
+    returning ${sql.unsafe(COLS)}`;
+  return r ? toRow(r) : null;
 }
 
-export async function getRunningRun(sql: postgres.Sql, mixId: string): Promise<SaveRunRow | null> {
+export async function getRunningRun(
+  sql: postgres.Sql,
+  userId: string,
+  mixId: string,
+): Promise<SaveRunRow | null> {
+  if (!UUID.test(mixId)) return null;
   const [r] = await sql<DbRow[]>`
     select ${sql.unsafe(COLS)} from save_runs sr
+    join mixes m on m.id = sr.mix_id and m.user_id = ${userId}
     where sr.mix_id = ${mixId} and sr.status = 'running'
     order by sr.started_at desc limit 1`;
   return r ? toRow(r) : null;
 }
 
-export async function updateRun(sql: postgres.Sql, id: string, patch: RunPatch): Promise<void> {
+export async function updateRun(
+  sql: postgres.Sql,
+  userId: string,
+  id: string,
+  patch: RunPatch,
+): Promise<void> {
   const set: Record<string, string | number | boolean> = {};
   if (patch.phase !== undefined) set.phase = patch.phase;
   if (patch.done !== undefined) set.done = patch.done;
@@ -79,19 +98,24 @@ export async function updateRun(sql: postgres.Sql, id: string, patch: RunPatch):
   if (patch.retries429 !== undefined) set.retries_429 = patch.retries429;
   const cols = Object.keys(set);
   if (cols.length === 0) return;
-  await sql`update save_runs set ${sql(set, cols)} where id = ${id}`;
+  await sql`
+    update save_runs sr set ${sql(set, cols)}
+    from mixes m
+    where sr.id = ${id} and m.id = sr.mix_id and m.user_id = ${userId}`;
 }
 
 export async function finishRun(
   sql: postgres.Sql,
+  userId: string,
   id: string,
   result: { status: "succeeded" | "failed"; error?: string },
 ): Promise<void> {
   await sql`
-    update save_runs set status = ${result.status}, error = ${result.error ?? null},
-      phase = case when ${result.status} = 'succeeded' then 'done' else phase end,
+    update save_runs sr set status = ${result.status}, error = ${result.error ?? null},
+      phase = case when ${result.status} = 'succeeded' then 'done' else sr.phase end,
       finished_at = now()
-    where id = ${id}`;
+    from mixes m
+    where sr.id = ${id} and m.id = sr.mix_id and m.user_id = ${userId}`;
 }
 
 export async function getRun(

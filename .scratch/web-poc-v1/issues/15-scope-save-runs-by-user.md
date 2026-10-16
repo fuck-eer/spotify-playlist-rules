@@ -1,6 +1,6 @@
 # 15: Scope every save_runs query by user
 
-**Status:** ready-for-agent
+**Status:** done
 **Type:** task
 **Refs:** review S1; CODING_STANDARDS §Security
 
@@ -11,5 +11,5 @@
 - another user's `startRun` on my Mix returns null; `getRunningRun` for another user is null; `updateRun`/`finishRun` by another user change nothing.
 
 ## Acceptance criteria
-- [ ] No save_runs query runs without a user scope
-- [ ] All tests pass
+- [x] No save_runs query runs without a user scope
+- [x] All tests pass

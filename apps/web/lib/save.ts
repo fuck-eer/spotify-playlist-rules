@@ -17,12 +17,12 @@ function userMessage(e: unknown): string {
 }
 
 /** Serialises progress writes so the last update always lands last. */
-function progressWriter(sql: postgres.Sql, runId: string) {
+function progressWriter(sql: postgres.Sql, userId: string, runId: string) {
   let chain: Promise<void> = Promise.resolve();
   return {
     push(patch: RunPatch): void {
       chain = chain
-        .then(() => updateRun(sql, runId, patch))
+        .then(() => updateRun(sql, userId, runId, patch))
         .catch((e: unknown) => {
           console.error("[save] progress update failed", {
             runId,
@@ -42,13 +42,13 @@ export async function performSave(
   runId: string,
   client: SpotifyClient,
 ): Promise<void> {
-  const progress = progressWriter(sql, runId);
+  const progress = progressWriter(sql, userId, runId);
   try {
     const mix = await getMix(sql, userId, mixId);
     if (!mix) throw new HttpError(404, "not_found", "That mix doesn't exist.");
     const rules = await listMixRules(sql, userId, mixId);
 
-    await updateRun(sql, runId, { phase: "reading", done: 0, total: 0 });
+    await updateRun(sql, userId, runId, { phase: "reading", done: 0, total: 0 });
     const source = await readSourceTracks(sql, client, mix.source, (done, total) =>
       progress.push({ done, total }),
     );
@@ -61,7 +61,7 @@ export async function performSave(
       seed: mix.shuffleSeed,
     });
 
-    await updateRun(sql, runId, { phase: "writing", done: 0, total: uris.length });
+    await updateRun(sql, userId, runId, { phase: "writing", done: 0, total: uris.length });
     const result = await writeTarget(client, {
       targetPlaylistId: mix.targetPlaylistId,
       defaultName: targetName(mix.name),
@@ -75,12 +75,12 @@ export async function performSave(
       lastSavedAt: new Date().toISOString(),
       lastSnapshotId: result.snapshotId,
     });
-    await updateRun(sql, runId, {
+    await updateRun(sql, userId, runId, {
       recreated: result.recreated,
       tracksWritten: result.tracksWritten,
       retries429: client.stats.retries429,
     });
-    await finishRun(sql, runId, { status: "succeeded" });
+    await finishRun(sql, userId, runId, { status: "succeeded" });
   } catch (e) {
     await progress.flush();
     console.error("[save] failed", {
@@ -89,6 +89,6 @@ export async function performSave(
       runId,
       error: e instanceof Error ? e.name : typeof e,
     });
-    await finishRun(sql, runId, { status: "failed", error: userMessage(e) });
+    await finishRun(sql, userId, runId, { status: "failed", error: userMessage(e) });
   }
 }
