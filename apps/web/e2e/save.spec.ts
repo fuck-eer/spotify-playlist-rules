@@ -42,6 +42,15 @@ test("save a Liked Songs mix with a Pin first rule to Spotify, then see the save
     page.getByText('Saved "Rules: Gym" to Spotify. Play it with shuffle off.'),
   ).toBeVisible({ timeout: 30_000 });
 
+  const dialog = page.getByRole("dialog", { name: "Saved to Spotify" });
+  await expect(dialog).toBeVisible();
+  const open = dialog.getByRole("link", { name: "Open in Spotify" });
+  await expect(open).toHaveAttribute("href", /^https:\/\/open\.spotify\.com\/playlist\/.+/);
+  await expect(open).toHaveAttribute("target", "_blank");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole("link", { name: "Open in Spotify" })).toBeVisible();
+
   await page.getByRole("link", { name: "Back" }).click();
   await expect(page.getByText("Liked Songs · 1 rule · just now")).toBeVisible();
 });

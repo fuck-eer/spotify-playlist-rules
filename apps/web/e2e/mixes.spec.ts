@@ -34,7 +34,9 @@ test("create a mix from Liked Songs, see it on Home, then delete it", async ({ p
   await page.getByRole("button", { name: /Liked Songs/ }).click();
   await expect(page).toHaveURL(/\/mixes\/[0-9a-f-]{36}$/, { timeout: 30_000 });
 
+  await expect(page.getByText("Rules: Late drive")).toBeVisible();
   await page.getByRole("link", { name: "Back" }).click();
+  await expect(page).toHaveURL(/\/mixes$/);
   await expect(page.getByText("Late drive")).toBeVisible();
   await expect(page.getByText("Liked Songs · 0 rules · not generated")).toBeVisible();
 

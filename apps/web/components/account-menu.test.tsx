@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { AccountMenu } from "./account-menu";
 
 afterEach(cleanup);
@@ -11,8 +11,11 @@ describe("AccountMenu", () => {
     trigger.focus();
     fireEvent.keyDown(trigger, { key: "Enter" });
     const item = await screen.findByRole("menuitem", { name: "Sign out" });
-    const form = item.closest("form") ?? document.querySelector("form[action='/api/auth/logout']");
-    expect(form?.getAttribute("action")).toBe("/api/auth/logout");
-    expect(form?.getAttribute("method")).toBe("post");
+    const form = document.querySelector<HTMLFormElement>("form[action='/api/auth/logout']")!;
+    expect(form.getAttribute("method")).toBe("post");
+    const submit = vi.fn((e: Event) => e.preventDefault());
+    form.addEventListener("submit", submit);
+    fireEvent.click(item);
+    expect(submit).toHaveBeenCalled();
   });
 });
