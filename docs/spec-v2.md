@@ -1,6 +1,6 @@
 # Spec: rulemix v2 (interactive cover graph on web + native Android app)
 
-Status: ready-for-agent, except everything that depends on ADR-0034 (Android auth), which is **Proposed, needs Nishchay's approval**.
+Status: ready-for-agent (ADR-0034 accepted 2026-10-17).
 Sources: ADR-0026 to ADR-0034, GLOSSARY.md, docs/research/android-queue-vs-playlist.md, design DSN-20261016-playlist-rules-v2 (`interaction-spec.md`, `motion-spec.md`, `android-notes.md`, `inventory.md`, `tokens.json`, `index.html` prototype). Tickets: `.scratch/v2-web/`, `.scratch/android/`.
 
 ## Problem Statement
@@ -146,5 +146,5 @@ The v1 Preview is a passive dot line: I can only shape a Mix by adding rules in 
 - Real-time push sync (clients refetch on focus and on 409).
 
 ## Further Notes
-- Decisions I made that Nishchay may want to override are listed at the end of `.scratch/v2-web/map.md`.
-- Nothing Android-auth-dependent starts before ADR-0034 is approved.
+- Approved decisions are listed at the end of `.scratch/v2-web/map.md`.
+- ADR-0034 approved 2026-10-17.
