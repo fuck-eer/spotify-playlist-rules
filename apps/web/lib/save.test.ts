@@ -70,6 +70,31 @@ describe.skipIf(!reachable)("performSave", () => {
     restore();
   });
 
+  it("v2: writes the arrangement (Manual order, Bench, deleted copy, Repeat with a removed play), pruned first", async () => {
+    const T = (id: string) => `spotify:track:${id}`;
+    // "Gym bangers": Echo, a local file, Drift, Sunrise.
+    await sql`update mixes set source_type = 'playlist', source_playlist_id = 'pl-own',
+      manual_order = ${[T("gone"), T("sunrise"), T("echo"), T("drift")]}::text[],
+      bench = ${[T("drift"), T("gone")]}::text[] where id = ${mixId}`;
+    const every = await createRule(sql, FAKE_ME, { kind: "every_n", n: 2 });
+    const rep = await createRule(sql, FAKE_ME, { kind: "repeat", n: 3 });
+    await addMixRule(sql, FAKE_ME, mixId, { ruleId: every.id, trackUri: T("echo") }, 10);
+    await addMixRule(sql, FAKE_ME, mixId, { ruleId: rep.id, trackUri: T("echo") }, 10);
+    await sql`update mix_rules set deleted_copies = '{1}' where rule_id = ${every.id}`;
+    await sql`update mix_rules set removed_plays = 1 where rule_id = ${rep.id}`;
+    const run = await save();
+    expect(run.status).toBe("succeeded");
+    const put = writeCalls().find((c) => c.method === "PUT")!;
+    // Line [sunrise, echo]; pin bassline at 0 (not in Source, copy kept), echo copy #1 deleted,
+    // echo stack x2.
+    expect((put.json as { uris: string[] }).uris).toEqual(
+      ["bassline", "sunrise", "echo", "echo"].map(T),
+    );
+    const [m] = await sql<{ manual_order: string[]; bench: string[] }[]>`
+      select manual_order, bench from mixes where id = ${mixId}`;
+    expect(m).toEqual({ manual_order: [T("sunrise"), T("echo"), T("drift")], bench: [T("drift")] });
+  });
+
   it("first save creates the private target named after the mix and stores its id", async () => {
     const run = await save();
     expect(run).toMatchObject({

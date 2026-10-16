@@ -1,10 +1,10 @@
-import { build, type BuildResult } from "@rulemix/rules-engine";
+import type { BuildResult } from "@rulemix/rules-engine";
 import { SpotifyAuthError, targetName, writeTarget, type SpotifyClient } from "@rulemix/spotify";
 import type postgres from "postgres";
-import { listMixRules } from "./db/mix-rules-repo";
 import { getMix, updateMix, type MixRow } from "./db/mixes-repo";
 import { finishRun, SAVE_FAILED, updateRun, type RunPatch } from "./db/save-runs-repo";
 import { HttpError } from "./http";
+import { buildForMix } from "./mix-build";
 import { readSourceTracks } from "./source-tracks";
 
 export { SAVE_FAILED };
@@ -49,7 +49,6 @@ export async function readAndBuild(
 ): Promise<{ mix: MixRow; uris: BuildResult["uris"] }> {
   const mix = await getMix(sql, userId, mixId);
   if (!mix) throw new HttpError(404, "not_found", "That mix doesn't exist.");
-  const rules = await listMixRules(sql, userId, mixId);
 
   await updateRun(sql, userId, runId, { phase: "reading", done: 0, total: 0 });
   const source = await readSourceTracks(sql, client, mix.source, (done, total) =>
@@ -57,21 +56,8 @@ export async function readAndBuild(
   );
   await progress.flush();
 
-  const { uris } = build({
-    source,
-    rules: rules.map((r) => ({
-      id: r.id,
-      kind: r.kind,
-      n: r.n,
-      uri: r.trackUri,
-      removedPlays: 0,
-      deletedCopies: [],
-    })),
-    keepSourceOrder: mix.keepSourceOrder,
-    seed: mix.shuffleSeed,
-    manualOrder: null,
-    bench: [],
-  });
+  const { result } = await buildForMix(sql, userId, mix, source);
+  const { uris } = result;
   return { mix, uris };
 }
 
