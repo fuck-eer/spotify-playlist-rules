@@ -15,7 +15,10 @@ export async function sourcesForUser(
 ): Promise<{ sources: SourceListItem[]; maxSourceTracks: number }> {
   const max = env().MAX_SOURCE_TRACKS;
   const all = await listSources(spotifyForUser(sql, userId), userId);
-  return { sources: all.map((s) => ({ ...s, tooLarge: s.trackCount > max })), maxSourceTracks: max };
+  return {
+    sources: all.map((s) => ({ ...s, tooLarge: s.trackCount > max })),
+    maxSourceTracks: max,
+  };
 }
 
 /** Server-side source checks (ADR-0014, ADR-0017). Returns the source with its display name. */

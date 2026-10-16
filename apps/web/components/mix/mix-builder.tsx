@@ -149,7 +149,13 @@ export function MixBuilder({ mix }: { mix: MixRow | null }) {
           aria-label="Back"
           className="grid size-[38px] place-items-center rounded-full bg-s2"
         >
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" className="size-[18px]">
+          <svg
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className="size-[18px]"
+          >
             <path d="M12 4l-6 6 6 6" />
           </svg>
         </Link>
@@ -198,7 +204,14 @@ export function MixBuilder({ mix }: { mix: MixRow | null }) {
                 : `${source.name} · ${trackCount} songs`
               : "Pick a source"}
           </span>
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#b3b3b3" strokeWidth="2">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="#b3b3b3"
+            strokeWidth="2"
+          >
             <path d="M8 4l6 6-6 6" />
           </svg>
         </button>

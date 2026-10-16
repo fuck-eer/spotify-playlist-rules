@@ -32,7 +32,11 @@ export async function signInFakeUser(sql: postgres.Sql): Promise<string> {
   return createSession(sql, FAKE_ME);
 }
 
-export function req(path: string, cookie: string | null, init: { method?: string; body?: unknown } = {}): NextRequest {
+export function req(
+  path: string,
+  cookie: string | null,
+  init: { method?: string; body?: unknown } = {},
+): NextRequest {
   const headers: Record<string, string> = { "content-type": "application/json" };
   if (cookie) headers.cookie = `${SESSION_COOKIE}=${cookie}`;
   return new NextRequest(`${APP}${path}`, {

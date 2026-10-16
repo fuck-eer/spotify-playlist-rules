@@ -75,7 +75,11 @@ export async function listMixes(sql: postgres.Sql, userId: string): Promise<MixR
   return (await select(sql, userId)).map(toRow);
 }
 
-export async function getMix(sql: postgres.Sql, userId: string, id: string): Promise<MixRow | null> {
+export async function getMix(
+  sql: postgres.Sql,
+  userId: string,
+  id: string,
+): Promise<MixRow | null> {
   if (!UUID.test(id)) return null;
   const [r] = await select(sql, userId, id);
   return r ? toRow(r) : null;

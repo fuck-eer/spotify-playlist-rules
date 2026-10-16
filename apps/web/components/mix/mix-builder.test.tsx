@@ -3,13 +3,31 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MixBuilder } from "./mix-builder";
 
 const replace = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ replace, push: vi.fn(), refresh: vi.fn() }) }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace, push: vi.fn(), refresh: vi.fn() }),
+}));
 
 const SOURCES = {
   maxSourceTracks: 600,
   sources: [
-    { type: "liked", id: null, name: "Liked Songs", trackCount: 412, imageUrl: null, ownerName: "N", tooLarge: false },
-    { type: "playlist", id: "big", name: "Everything", trackCount: 1200, imageUrl: null, ownerName: "N", tooLarge: true },
+    {
+      type: "liked",
+      id: null,
+      name: "Liked Songs",
+      trackCount: 412,
+      imageUrl: null,
+      ownerName: "N",
+      tooLarge: false,
+    },
+    {
+      type: "playlist",
+      id: "big",
+      name: "Everything",
+      trackCount: 1200,
+      imageUrl: null,
+      ownerName: "N",
+      tooLarge: true,
+    },
   ],
 };
 
@@ -51,7 +69,9 @@ describe("MixBuilder", () => {
     expect(screen.getByText("1200 songs · over the 600 limit")).toBeTruthy();
     expect((big as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(big);
-    expect(fetchMock.mock.calls.some(([u, i]) => u === "/api/mixes" && i?.method === "POST")).toBe(false);
+    expect(fetchMock.mock.calls.some(([u, i]) => u === "/api/mixes" && i?.method === "POST")).toBe(
+      false,
+    );
 
     fireEvent.click(screen.getByRole("button", { name: /Liked Songs/ }));
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/mixes/m1"));

@@ -28,7 +28,10 @@ export default async function MixesPage() {
           </button>
         </form>
       </div>
-      <Button asChild className="fixed bottom-6 right-4 rounded-full bg-tx px-5 font-bold text-black">
+      <Button
+        asChild
+        className="fixed bottom-6 right-4 rounded-full bg-tx px-5 font-bold text-black"
+      >
         <Link href="/mixes/new">New mix</Link>
       </Button>
     </main>

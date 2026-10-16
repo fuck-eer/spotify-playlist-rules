@@ -11,7 +11,11 @@ export function CoverTile({ seed, imageUrl }: { seed: string; imageUrl?: string 
   return (
     <div className="grid size-14 flex-none grid-cols-2 overflow-hidden rounded" aria-hidden="true">
       {[0, 1, 2, 3].map((i) => (
-        <i key={i} className="block" style={{ background: RULE_COLORS[(h + i * 3) % RULE_COLORS.length] }} />
+        <i
+          key={i}
+          className="block"
+          style={{ background: RULE_COLORS[(h + i * 3) % RULE_COLORS.length] }}
+        />
       ))}
     </div>
   );

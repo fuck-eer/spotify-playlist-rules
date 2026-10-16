@@ -1,6 +1,6 @@
 # 09: Mixes and Source playlist picker (vertical)
 
-**Status:** ready-for-agent
+**Status:** done
 **Type:** task
 **Blocked by:** 03, 04, 06, 07
 **Glossary terms:** Mix, Source playlist, Target playlist, Seed
@@ -65,5 +65,13 @@ Home (`/mixes`) lists the user's Mixes. "New mix" opens the Mix builder at `/mix
 - `e2e/mixes.spec.ts` (seeded session plus the app pointed at fake-spotify through env): create a mix from Liked Songs, see it on Home with "· not generated", then delete it.
 
 ## Acceptance criteria
-- [ ] Followed playlists never appear (ADR-0014); the source limit is enforced on both the client and the server
-- [ ] All copy is exact; all tests pass
+- [x] Followed playlists never appear (ADR-0014); the source limit is enforced on both the client and the server
+- [x] All copy is exact; all tests pass
+
+## Notes (implementation)
+- Delete mix asks "Delete this mix?" / "Its Spotify playlist stays." (Not now / Delete) before deleting; copy not in the ticket.
+- Picker sheet title "Pick a source" and load error "Couldn't load your playlists. Try again." are new copy.
+- Home meta uses "1 rule" for a single rule; relative time is "just now / Nm ago / Nh ago / Nd ago".
+- Home keeps a small "Sign out" link (from the placeholder) under the list.
+- e2e: playwright starts a fake Spotify (`e2e/fake-spotify-server.ts`, port `E2E_FAKE_SPOTIFY_PORT`, default E2E_PORT+1000) and points the dev server at it.
+- Source change from the builder does not confirm yet (no rules UI until ticket 10); the server deletes mix_rules on a real source change.

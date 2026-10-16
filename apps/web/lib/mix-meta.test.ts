@@ -6,16 +6,28 @@ const base = { source: { type: "liked" as const, id: null, name: "Liked Songs" }
 
 describe("mixMetaLine", () => {
   it("says not generated when never saved", () => {
-    expect(mixMetaLine({ ...base, lastSavedAt: null }, NOW)).toBe("Liked Songs · 3 rules · not generated");
+    expect(mixMetaLine({ ...base, lastSavedAt: null }, NOW)).toBe(
+      "Liked Songs · 3 rules · not generated",
+    );
   });
   it("uses relative save time", () => {
     const at = (ms: number) => new Date(NOW.getTime() - ms).toISOString();
-    expect(mixMetaLine({ ...base, lastSavedAt: at(20_000) }, NOW)).toBe("Liked Songs · 3 rules · just now");
-    expect(mixMetaLine({ ...base, lastSavedAt: at(5 * 60_000) }, NOW)).toBe("Liked Songs · 3 rules · 5m ago");
-    expect(mixMetaLine({ ...base, lastSavedAt: at(2 * 3600_000) }, NOW)).toBe("Liked Songs · 3 rules · 2h ago");
-    expect(mixMetaLine({ ...base, lastSavedAt: at(3 * 86400_000) }, NOW)).toBe("Liked Songs · 3 rules · 3d ago");
+    expect(mixMetaLine({ ...base, lastSavedAt: at(20_000) }, NOW)).toBe(
+      "Liked Songs · 3 rules · just now",
+    );
+    expect(mixMetaLine({ ...base, lastSavedAt: at(5 * 60_000) }, NOW)).toBe(
+      "Liked Songs · 3 rules · 5m ago",
+    );
+    expect(mixMetaLine({ ...base, lastSavedAt: at(2 * 3600_000) }, NOW)).toBe(
+      "Liked Songs · 3 rules · 2h ago",
+    );
+    expect(mixMetaLine({ ...base, lastSavedAt: at(3 * 86400_000) }, NOW)).toBe(
+      "Liked Songs · 3 rules · 3d ago",
+    );
   });
   it("singular rule", () => {
-    expect(mixMetaLine({ ...base, ruleCount: 1, lastSavedAt: null }, NOW)).toBe("Liked Songs · 1 rule · not generated");
+    expect(mixMetaLine({ ...base, ruleCount: 1, lastSavedAt: null }, NOW)).toBe(
+      "Liked Songs · 1 rule · not generated",
+    );
   });
 });

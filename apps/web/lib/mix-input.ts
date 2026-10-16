@@ -9,7 +9,11 @@ const Name = z.string().trim().min(1).max(80);
 
 export const CreateMixBody = z.object({ name: Name, source: Source });
 export const PatchMixBody = z
-  .object({ name: Name.optional(), source: Source.optional(), keepSourceOrder: z.boolean().optional() })
+  .object({
+    name: Name.optional(),
+    source: Source.optional(),
+    keepSourceOrder: z.boolean().optional(),
+  })
   .strict();
 
 export async function parseBody<T>(req: Request, schema: z.ZodType<T>): Promise<T> {

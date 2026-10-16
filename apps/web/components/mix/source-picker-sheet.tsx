@@ -24,7 +24,10 @@ export function SourcePickerSheet({
 }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="max-h-[80vh] overflow-y-auto rounded-t-2xl border-0 bg-s2 p-5">
+      <SheetContent
+        side="bottom"
+        className="max-h-[80vh] overflow-y-auto rounded-t-2xl border-0 bg-s2 p-5"
+      >
         <SheetTitle className="text-lg">Pick a source</SheetTitle>
         <SheetDescription className="text-xs text-dim">
           Your playlists, collabs or Liked Songs.

@@ -1,14 +1,7 @@
 import type postgres from "postgres";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { canReachTestDb, insertTestUser, resetTestDb } from "./test-utils";
-import {
-  createMix,
-  deleteMix,
-  getMix,
-  listMixes,
-  randomSeed,
-  updateMix,
-} from "./mixes-repo";
+import { createMix, deleteMix, getMix, listMixes, randomSeed, updateMix } from "./mixes-repo";
 
 const reachable = await canReachTestDb();
 if (!reachable) console.warn("[mixes-repo.test] TEST_DATABASE_URL unreachable: skipping");
