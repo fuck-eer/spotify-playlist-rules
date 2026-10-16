@@ -16,7 +16,12 @@ describe.skipIf(!reachable)("save runs repo", () => {
     sql = await resetTestDb();
     user = (await insertTestUser(sql)).id;
     mixId = (
-      await createMix(sql, user, { name: "Gym", source: { type: "liked", id: null, name: "Liked Songs" } }, 1)
+      await createMix(
+        sql,
+        user,
+        { name: "Gym", source: { type: "liked", id: null, name: "Liked Songs" } },
+        1,
+      )
     ).id;
   });
   afterAll(async () => {
@@ -40,12 +45,22 @@ describe.skipIf(!reachable)("save runs repo", () => {
     expect((await getRunningRun(sql, mixId))?.id).toBe(run.id);
 
     await updateRun(sql, run.id, { phase: "writing", done: 100, total: 250 });
-    expect(await getRun(sql, user, mixId, run.id)).toMatchObject({ phase: "writing", done: 100, total: 250 });
+    expect(await getRun(sql, user, mixId, run.id)).toMatchObject({
+      phase: "writing",
+      done: 100,
+      total: 250,
+    });
 
     await updateRun(sql, run.id, { tracksWritten: 250, recreated: true, retries429: 1 });
     await finishRun(sql, run.id, { status: "succeeded" });
     const done = await getRun(sql, user, mixId, run.id);
-    expect(done).toMatchObject({ status: "succeeded", phase: "done", tracksWritten: 250, recreated: true, retries429: 1 });
+    expect(done).toMatchObject({
+      status: "succeeded",
+      phase: "done",
+      tracksWritten: 250,
+      recreated: true,
+      retries429: 1,
+    });
     expect(done?.finishedAt).not.toBeNull();
     expect(await getRunningRun(sql, mixId)).toBeNull();
   });
@@ -53,7 +68,10 @@ describe.skipIf(!reachable)("save runs repo", () => {
   it("records a failure message", async () => {
     const run = await startRun(sql, mixId);
     await finishRun(sql, run.id, { status: "failed", error: "Nope." });
-    expect(await getRun(sql, user, mixId, run.id)).toMatchObject({ status: "failed", error: "Nope." });
+    expect(await getRun(sql, user, mixId, run.id)).toMatchObject({
+      status: "failed",
+      error: "Nope.",
+    });
   });
 
   it("getRun is scoped to the mix owner and the mix", async () => {
@@ -61,7 +79,12 @@ describe.skipIf(!reachable)("save runs repo", () => {
     const other = (await insertTestUser(sql)).id;
     expect(await getRun(sql, other, mixId, run.id)).toBeNull();
     const otherMix = (
-      await createMix(sql, user, { name: "B", source: { type: "liked", id: null, name: "Liked Songs" } }, 1)
+      await createMix(
+        sql,
+        user,
+        { name: "B", source: { type: "liked", id: null, name: "Liked Songs" } },
+        1,
+      )
     ).id;
     expect(await getRun(sql, user, otherMix, run.id)).toBeNull();
     expect(await getRun(sql, user, mixId, "not-a-uuid")).toBeNull();

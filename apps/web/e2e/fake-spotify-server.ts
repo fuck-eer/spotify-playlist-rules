@@ -2,10 +2,12 @@
 import { createServer, request } from "node:http";
 import { startFakeSpotify } from "@rulemix/spotify/testing";
 import { installFakeLibrary } from "../lib/testing/fake-library";
+import { installFakeWrites } from "../lib/testing/fake-writes";
 
 const port = Number(process.argv[2] ?? 3999);
 const fake = await startFakeSpotify();
 installFakeLibrary(fake);
+installFakeWrites(fake);
 const upstream = new URL(fake.url);
 
 // Proxy a fixed port onto the fake's ephemeral one.

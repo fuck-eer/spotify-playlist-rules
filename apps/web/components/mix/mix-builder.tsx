@@ -27,7 +27,10 @@ import type { MixRow, MixSource } from "@/lib/db/mixes-repo";
 import type { RuleRow } from "@/lib/db/rules-repo";
 import type { SourceListItem } from "@/lib/sources-types";
 import { CoverTile } from "./cover-tile";
+import { targetName } from "@rulemix/spotify/names";
+import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
+import type { SaveRunRow } from "@/lib/db/save-runs-repo";
 import type { PreviewResponse } from "@/lib/preview";
 import { PreviewPanel, type PreviewState } from "./preview-panel";
 import { RuleCard } from "./rule-card";
@@ -35,6 +38,8 @@ import { RulePickerSheet, type RulesState } from "./rule-picker-sheet";
 import { RulesIconLink } from "./rules-icon-link";
 import { SongPickerSheet, type SongsState } from "./song-picker-sheet";
 import { SourcePickerSheet, type SourcesState } from "./source-picker-sheet";
+
+const SAVE_FAILED_COPY = "Couldn't create the playlist. Check your connection and retry.";
 
 interface ApiError {
   error?: { message?: string };
@@ -80,6 +85,11 @@ export function MixBuilder({
   const [previewTick, setPreviewTick] = useState(0);
   const previewReq = useRef(0);
   const refreshPreview = () => setPreviewTick((t) => t + 1);
+  const [saveRunId, setSaveRunId] = useState<string | null>(null);
+  const [saveRun, setSaveRun] = useState<SaveRunRow | null>(null);
+  const [startingSave, setStartingSave] = useState(false);
+  // Ref guard: the toast's Retry closure outlives the render that created it.
+  const saveBusy = useRef(false);
   const [sources, setSources] = useState<SourcesState>({
     status: "idle",
     sources: [],
@@ -318,6 +328,75 @@ export function MixBuilder({
     refreshPreview();
   }
 
+  async function onSave(): Promise<void> {
+    if (!mixId || saveBusy.current) return;
+    saveBusy.current = true;
+    setStartingSave(true);
+    let started = false;
+    try {
+      const res = await fetch(`/api/mixes/${mixId}/save`, { method: "POST" });
+      if (res.status === 202 || res.status === 409) {
+        const body = (await res.json()) as { runId?: string };
+        if (body.runId) {
+          started = true;
+          setSaveRun(null);
+          setSaveRunId(body.runId);
+          return;
+        }
+      }
+      saveFailed(res.ok ? SAVE_FAILED_COPY : await errorMessage(res));
+    } catch {
+      saveFailed(SAVE_FAILED_COPY);
+    } finally {
+      if (!started) saveBusy.current = false;
+      setStartingSave(false);
+    }
+  }
+
+  function saveFailed(message: string): void {
+    toast.error(message, { action: { label: "Retry", onClick: () => void onSave() } });
+  }
+
+  // Poll the run every 1 s while it is running (spec A5).
+  useEffect(() => {
+    if (!mixId || !saveRunId) return;
+    let stopped = false;
+    const timer = setInterval(() => {
+      void (async () => {
+        try {
+          const res = await fetch(`/api/mixes/${mixId}/save/${saveRunId}`);
+          if (stopped || !res.ok) return;
+          const { run } = (await res.json()) as { run: SaveRunRow };
+          if (stopped) return;
+          setSaveRun(run);
+          if (run.status === "running") return;
+          stopped = true;
+          clearInterval(timer);
+          saveBusy.current = false;
+          setSaveRunId(null);
+          setSaveRun(null);
+          if (run.status === "succeeded") {
+            const base = `Saved "${targetName(savedName)}" to Spotify. Play it with shuffle off.`;
+            toast.success(
+              run.recreated ? `${base} It was recreated because the old one was gone.` : base,
+            );
+            router.refresh();
+          } else {
+            saveFailed(run.error ?? SAVE_FAILED_COPY);
+          }
+        } catch {
+          // A missed poll is retried on the next tick.
+        }
+      })();
+    }, 1000);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mixId, saveRunId]);
+
+  const saving = startingSave || saveRunId !== null;
   const unavailable = new Set(
     (preview.data?.issues ?? [])
       .filter((i) => i.kind === "unavailable_rule_song")
@@ -500,6 +579,7 @@ export function MixBuilder({
               </div>
               <Switch
                 aria-labelledby="keep-base-order"
+                className="data-[state=checked]:bg-tx"
                 checked={keepSourceOrder}
                 onCheckedChange={(v) => void onKeepSourceOrder(v)}
               />
@@ -507,6 +587,34 @@ export function MixBuilder({
           </>
         ) : null}
       </div>
+      {mixId ? (
+        <div className="fixed inset-x-0 bottom-0 mx-auto max-w-xl border-t border-line bg-bg px-4 pb-6 pt-3.5">
+          {saving ? (
+            <div className="mb-3">
+              <Progress
+                value={saveRun && saveRun.total > 0 ? (saveRun.done / saveRun.total) * 100 : 0}
+                className="bg-s3 [&>[data-slot=progress-indicator]]:bg-tx"
+              />
+              <p className="mt-1.5 font-mono text-xs text-mut">
+                {saveRun
+                  ? `${saveRun.phase === "reading" ? "Reading" : "Writing"} ${saveRun.done}/${saveRun.total}`
+                  : "Starting…"}
+              </p>
+            </div>
+          ) : null}
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => void onSave()}
+            className="w-full rounded-full bg-[#1DB954] px-5 py-3.5 text-[15px] font-bold text-black disabled:opacity-60"
+          >
+            Save to Spotify
+          </button>
+          <p className="mt-2 font-mono text-[11px] text-dim">
+            Play with shuffle off. Saving while it&apos;s playing may skip ahead.
+          </p>
+        </div>
+      ) : null}
       <SourcePickerSheet
         open={pickerOpen}
         onOpenChange={setPickerOpen}

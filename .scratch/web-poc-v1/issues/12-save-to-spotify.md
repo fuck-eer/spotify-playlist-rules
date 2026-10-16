@@ -1,6 +1,6 @@
 # 12: Save to Spotify with progress, recreate note, shuffle tip
 
-**Status:** ready-for-agent
+**Status:** done (pending Nishchay's manual check against real Spotify)
 **Type:** task
 **Blocked by:** 05, 11
 **Glossary terms:** Save to Spotify, Target playlist, Mix, Preview
@@ -63,7 +63,16 @@ In the Mix builder, the green primary button "Save to Spotify" starts a save. A 
 - `e2e/save.spec.ts` (seeded session + fake-spotify): Liked Songs mix + a Pin first rule → Save to Spotify → success toast → Home shows the relative saved time.
 
 ## Acceptance criteria
-- [ ] Writing happens only through Save to Spotify
-- [ ] One Target per Mix, tracked by id; recreated when missing, with a note
-- [ ] Progress updates via 1 s polling; all tests pass
+- [x] Writing happens only through Save to Spotify
+- [x] One Target per Mix, tracked by id; recreated when missing, with a note
+- [x] Progress updates via 1 s polling; all tests pass
 - [ ] Manual check by Nishchay against real Spotify: a playlist "Rules: <mix>" appears with the expected order
+
+## Notes (implementation)
+- `targetName` moved to `packages/spotify/src/names.ts`, exported as `@rulemix/spotify/names` (browser-safe; the package index pulls `node:crypto` into client bundles). `writer.ts` re-exports it.
+- The failure toast shows the run's own user-safe error (generic copy, or "Spotify access expired. Sign in again." / the source-too-large message), with Retry.
+- A 409 `save_in_progress` from POST resumes polling that run. The 409 body is `{ error: { code, message }, runId }`.
+- Switch "on" and the progress bar use white, so the Save button is the only #1DB954 element.
+- On success the builder calls `router.refresh()` so Home shows the new saved time.
+- Known limit: a run left "running" by a crashed server blocks new saves for that Mix (no stale-run timeout yet).
+- Test helper `lib/testing/fake-writes.ts` serves create / library-contains / replace / append; the e2e fake server installs it.

@@ -30,7 +30,8 @@ describe.skipIf(!reachable)("save routes", () => {
   let release: () => void;
 
   const ctx = (p: Record<string, string>) => ({ params: Promise.resolve(p) }) as never;
-  const post = () => saveRoute(req(`/api/mixes/${mixId}/save`, cookie, { method: "POST" }), ctx({ id: mixId }));
+  const post = () =>
+    saveRoute(req(`/api/mixes/${mixId}/save`, cookie, { method: "POST" }), ctx({ id: mixId }));
 
   beforeAll(async () => {
     ({ fake, restore } = await startRouteHarness());
@@ -46,7 +47,12 @@ describe.skipIf(!reachable)("save routes", () => {
       return { body: { snapshot_id: "snap-1" } };
     });
     mixId = (
-      await createMix(sql, FAKE_ME, { name: "Gym", source: { type: "liked", id: null, name: "Liked Songs" } }, 1)
+      await createMix(
+        sql,
+        FAKE_ME,
+        { name: "Gym", source: { type: "liked", id: null, name: "Liked Songs" } },
+        1,
+      )
     ).id;
   });
   afterAll(async () => {
@@ -73,8 +79,14 @@ describe.skipIf(!reachable)("save routes", () => {
 
     release();
     await Promise.all(tasks.splice(0));
-    const done = await getRunRoute(req(`/api/mixes/${mixId}/save/${runId}`, cookie), ctx({ id: mixId, runId }));
-    expect(((await done.json()) as { run: SaveRunRow }).run).toMatchObject({ status: "succeeded", tracksWritten: 3 });
+    const done = await getRunRoute(
+      req(`/api/mixes/${mixId}/save/${runId}`, cookie),
+      ctx({ id: mixId, runId }),
+    );
+    expect(((await done.json()) as { run: SaveRunRow }).run).toMatchObject({
+      status: "succeeded",
+      tracksWritten: 3,
+    });
   });
 
   it("GET of another user's run is 404", async () => {
@@ -92,7 +104,10 @@ describe.skipIf(!reachable)("save routes", () => {
 
   it("POST for an unknown mix is 404", async () => {
     const missing = "00000000-0000-0000-0000-000000000000";
-    const res = await saveRoute(req(`/api/mixes/${missing}/save`, cookie, { method: "POST" }), ctx({ id: missing }));
+    const res = await saveRoute(
+      req(`/api/mixes/${missing}/save`, cookie, { method: "POST" }),
+      ctx({ id: missing }),
+    );
     expect(res.status).toBe(404);
   });
 });

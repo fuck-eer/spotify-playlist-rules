@@ -21,9 +21,7 @@ export interface WriteTargetResult {
 
 const DESCRIPTION = "Made by rulemix. Play with shuffle off.";
 
-export function targetName(mixName: string): string {
-  return `Rules: ${mixName}`;
-}
+export { targetName } from "./names.js";
 
 /** Whether the user still has the playlist in their library (ADR-0016). 404/403/[false] mean missing. */
 async function targetExists(c: SpotifyClient, id: string): Promise<boolean> {

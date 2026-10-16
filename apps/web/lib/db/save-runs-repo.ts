@@ -35,7 +35,8 @@ interface DbRow {
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const COLS = "sr.id, sr.mix_id, sr.status, sr.phase, sr.done, sr.total, sr.tracks_written, sr.recreated, sr.retries_429, sr.error, sr.started_at, sr.finished_at";
+const COLS =
+  "sr.id, sr.mix_id, sr.status, sr.phase, sr.done, sr.total, sr.tracks_written, sr.recreated, sr.retries_429, sr.error, sr.started_at, sr.finished_at";
 
 function toRow(r: DbRow): SaveRunRow {
   return {

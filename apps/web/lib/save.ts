@@ -21,9 +21,14 @@ function progressWriter(sql: postgres.Sql, runId: string) {
   let chain: Promise<void> = Promise.resolve();
   return {
     push(patch: RunPatch): void {
-      chain = chain.then(() => updateRun(sql, runId, patch)).catch((e: unknown) => {
-        console.error("[save] progress update failed", { runId, e: e instanceof Error ? e.name : typeof e });
-      });
+      chain = chain
+        .then(() => updateRun(sql, runId, patch))
+        .catch((e: unknown) => {
+          console.error("[save] progress update failed", {
+            runId,
+            e: e instanceof Error ? e.name : typeof e,
+          });
+        });
     },
     flush: () => chain,
   };
@@ -78,7 +83,12 @@ export async function performSave(
     await finishRun(sql, runId, { status: "succeeded" });
   } catch (e) {
     await progress.flush();
-    console.error("[save] failed", { userId, mixId, runId, error: e instanceof Error ? e.name : typeof e });
+    console.error("[save] failed", {
+      userId,
+      mixId,
+      runId,
+      error: e instanceof Error ? e.name : typeof e,
+    });
     await finishRun(sql, runId, { status: "failed", error: userMessage(e) });
   }
 }

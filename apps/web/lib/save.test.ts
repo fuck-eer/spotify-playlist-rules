@@ -25,7 +25,10 @@ describe.skipIf(!reachable)("performSave", () => {
   let mixId: string;
 
   const client = (): SpotifyClient =>
-    createClient({ ...spotifyConfig(), sleep: () => Promise.resolve() }, dbTokenStore(sql, FAKE_ME));
+    createClient(
+      { ...spotifyConfig(), sleep: () => Promise.resolve() },
+      dbTokenStore(sql, FAKE_ME),
+    );
   async function save() {
     const run = await startRun(sql, mixId);
     await performSave(sql, FAKE_ME, mixId, run.id, client());
@@ -41,10 +44,21 @@ describe.skipIf(!reachable)("performSave", () => {
     await signInFakeUser(sql);
     writes = installFakeWrites(fake);
     mixId = (
-      await createMix(sql, FAKE_ME, { name: "Gym", source: { type: "liked", id: null, name: "Liked Songs" } }, 1)
+      await createMix(
+        sql,
+        FAKE_ME,
+        { name: "Gym", source: { type: "liked", id: null, name: "Liked Songs" } },
+        1,
+      )
     ).id;
     const rule = await createRule(sql, FAKE_ME, { kind: "pin_first", n: null });
-    await addMixRule(sql, FAKE_ME, mixId, { ruleId: rule.id, trackUri: "spotify:track:bassline" }, 10);
+    await addMixRule(
+      sql,
+      FAKE_ME,
+      mixId,
+      { ruleId: rule.id, trackUri: "spotify:track:bassline" },
+      10,
+    );
     fake.calls.length = 0;
   });
   afterAll(async () => {
@@ -56,8 +70,15 @@ describe.skipIf(!reachable)("performSave", () => {
 
   it("first save creates the private target named after the mix and stores its id", async () => {
     const run = await save();
-    expect(run).toMatchObject({ status: "succeeded", phase: "done", recreated: false, tracksWritten: 3 });
-    const create = writeCalls().find((c) => c.method === "POST" && c.path.endsWith("/me/playlists"))!;
+    expect(run).toMatchObject({
+      status: "succeeded",
+      phase: "done",
+      recreated: false,
+      tracksWritten: 3,
+    });
+    const create = writeCalls().find(
+      (c) => c.method === "POST" && c.path.endsWith("/me/playlists"),
+    )!;
     expect(create.json).toMatchObject({ name: "Rules: Gym", public: false });
     const put = writeCalls().find((c) => c.method === "PUT")!;
     expect(put.path).toBe("/v1/playlists/tgt-1/items");
@@ -65,7 +86,9 @@ describe.skipIf(!reachable)("performSave", () => {
     const mix = (await getMix(sql, FAKE_ME, mixId))!;
     expect(mix.targetPlaylistId).toBe("tgt-1");
     expect(mix.lastSavedAt).not.toBeNull();
-    const [row] = await sql<{ last_snapshot_id: string }[]>`select last_snapshot_id from mixes where id = ${mixId}`;
+    const [row] = await sql<
+      { last_snapshot_id: string }[]
+    >`select last_snapshot_id from mixes where id = ${mixId}`;
     expect(row!.last_snapshot_id).toMatch(/^snap-/);
   });
 
@@ -75,9 +98,11 @@ describe.skipIf(!reachable)("performSave", () => {
     const run = await save();
     expect(run.recreated).toBe(false);
     expect(writeCalls().some((c) => c.path.endsWith("/me/playlists"))).toBe(false);
-    expect(writeCalls().filter((c) => c.method === "PUT").map((c) => c.path)).toEqual([
-      "/v1/playlists/tgt-1/items",
-    ]);
+    expect(
+      writeCalls()
+        .filter((c) => c.method === "PUT")
+        .map((c) => c.path),
+    ).toEqual(["/v1/playlists/tgt-1/items"]);
   });
 
   it("recreates a target that is gone and stores the new id", async () => {
@@ -105,7 +130,10 @@ describe.skipIf(!reachable)("performSave", () => {
   it("fails with the sign-in message when the token refresh is refused", async () => {
     fake.on("POST", /^\/api\/token$/, () => ({ status: 400, body: { error: "invalid_grant" } }));
     const run = await save();
-    expect(run).toMatchObject({ status: "failed", error: "Spotify access expired. Sign in again." });
+    expect(run).toMatchObject({
+      status: "failed",
+      error: "Spotify access expired. Sign in again.",
+    });
     fake.on("POST", /^\/api\/token$/, () => ({
       body: { access_token: "fake-access", expires_in: 3600, scope: "" },
     }));
