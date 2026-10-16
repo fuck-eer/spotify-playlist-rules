@@ -1,6 +1,6 @@
 # 05: Spotify package: Target playlist writer
 
-**Status:** ready-for-agent
+**Status:** done
 **Type:** task
 **Blocked by:** 04
 **Glossary terms:** Target playlist, Save to Spotify, Mix
@@ -48,7 +48,7 @@ export function writeTarget(c: SpotifyClient, input: WriteTargetInput): Promise<
 - `targetName("Gym") === "Rules: Gym"`.
 
 ## Acceptance criteria
-- [ ] Exported exactly as above; all tests pass offline
+- [x] Exported exactly as above; all tests pass offline
 
 ## Endpoint check (verified 2026-10-16 against developer.spotify.com, during ticket 04)
 - `GET /playlists/{id}/followers/contains`: **REMOVED** in the February 2026 Web API changes; replacement is `GET /me/library/contains?uris=...` (accepts `spotify:playlist:{id}`, max 40 URIs, returns an array of booleans; scopes `user-library-read` / `playlist-read-private`, both already in `SCOPES`). Step 1 above updated accordingly.

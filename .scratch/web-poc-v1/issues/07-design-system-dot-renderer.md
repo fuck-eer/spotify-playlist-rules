@@ -1,6 +1,6 @@
 # 07: Design system, 10-colour rule palette, SVG dot renderer
 
-**Status:** ready-for-agent
+**Status:** done
 **Type:** task
 **Blocked by:** 01
 **Glossary terms:** Rule, Mix, Preview, Pin first, Insert every N, Repeat N times
@@ -85,6 +85,6 @@ The neutral dot (library, pickers, base songs) is `#555555`. The editor draft do
 - `rule-intent-graphic.test.tsx`: every_n with n=4 gives coloured dots at indices 4 and 9; pin gives a coloured dot at index 0.
 
 ## Acceptance criteria
-- [ ] `/dev/components` visually matches the dot style in the mockup's `editor.png` (manual check)
-- [ ] The palette is defined once (TS + CSS) with the exact hex values above
-- [ ] Reduced motion disables animation
+- [x] `/dev/components` visually matches the dot style in the mockup's `editor.png` (manual check)
+- [x] The palette is defined once (TS + CSS) with the exact hex values above
+- [x] Reduced motion disables animation
