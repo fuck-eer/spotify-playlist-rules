@@ -319,17 +319,17 @@ Status: ready-for-agent. Decided by Nishchay on 2026-10-17 (ADR-0021 to ADR-0024
 Creating a `Rules: <name>` playlist per Mix piles playlists up, and I still have to open Spotify and find the right one. What I'm really managing is what plays next. The Web API can't clear or rebuild the queue, and playing a raw song list doesn't work on my phone (docs/research/phase-1-queue-research.md).
 
 ### Solution
-A primary **Play** button on the Mix page. It writes the Mix's order into my one private **Player playlist** (`rulemix player`), starts it on my active Spotify device with shuffle off when it can, and opens it in Spotify. Save to Spotify stays as a secondary option.
+A primary **Play** button on the Mix page. It writes the Mix's order into my one private **Player playlist** (`rulemix player`), starts it on my active Spotify device with shuffle off when it can, and shows a dialog with an Open in Spotify button. Save to Spotify stays as a secondary option.
 
 ### User stories
 50. As a user, I want one Play button on a Mix that writes its order into a single `rulemix player` playlist, so that playlists don't pile up.
 51. As a user, I want the Player playlist created the first time I tap Play, and created again if I deleted it, so that Play always works.
 52. As a user, I want Play to overwrite the Player playlist when it exists, keeping repeats and skipping Unavailable tracks exactly like Save, so that what plays matches the Preview.
 53. As a user with Spotify active on a device, I want Play to turn shuffle off and start the Player playlist there, so that I don't have to tap anything in Spotify.
-54. As a user, I want Play to then open the Player playlist in Spotify (the app on my phone), so that I land where it's playing or can start it myself.
-55. As a user with no active device, I want Play to just open the Player playlist, with no error.
-56. As a user, when Spotify accepted the play request but nothing started, I want no error, just the opened playlist, so that I'm not misled.
-57. As a user who signed in before Play existed, I want Play to still write and open the playlist, plus a "Log in again to enable auto-play" hint, so that I can opt into auto-play.
+54. As a user, I want Play to then show a dialog with the outcome and an "Open in Spotify" button linking to the Player playlist, so that one tap takes me to the Spotify app (a real tap, so phones hand off to the app).
+55. As a user with no active device, I want the same dialog telling me to open it and press play, with no error.
+56. As a user, when Spotify accepted the play request but nothing started, I want no error, just the dialog, so that I'm not misled.
+57. As a user who signed in before Play existed, I want Play to still write the playlist and show the dialog, plus a "Log in again to enable auto-play" hint, so that I can opt into auto-play.
 58. As a user, I want progress while Play reads and writes, the same as Save.
 59. As a user, I want Save to Spotify to keep working as a secondary action, so that I can still keep a Mix as its own playlist.
 
@@ -352,21 +352,22 @@ A primary **Play** button on the Mix page. It writes the Mix's order into my one
   The run then succeeds. A failure before or during the write fails the run like Save (same messages).
   Save runs set `playlist_id` to the Target id too.
 - **API:** `POST /api/mixes/{id}/play` mirrors the Save route (202 `{ runId }`, 409 `{ runId }` when any run of the Mix is running, 404). The run status endpoint returns `kind`, `playback` and `playlistId`.
-- **Mix page:** `canAutoPlay` (from stored scopes) is passed in. The bottom bar shows **Play** (green, primary) and **Save to Spotify** (secondary, neutral). Both are disabled while any run is going; progress shows for either. When a Play run succeeds, the page calls `openExternal("https://open.spotify.com/playlist/<id>")` (same-tab navigation, `window.location.assign`), after a toast:
-  - `started`: "Playing on Spotify."
-  - `not_started` / `no_device`: "rulemix player is ready. Opening Spotify…"
-  - `needs_scopes`: "rulemix player is ready. Opening Spotify…" (the hint below covers auto-play).
-  
+- **Mix page:** `canAutoPlay` (from stored scopes) is passed in. The bottom bar shows **Play** (green, primary) and **Save to Spotify** (secondary, neutral). Both are disabled while any run is going; progress shows for either. When a Play run succeeds the page never navigates by itself; it opens a dialog (same pattern as the Save dialog):
+  - `started`: title "Playing on Spotify", text "rulemix player is playing with shuffle off."
+  - `not_started` / `no_device` / `needs_scopes`: title "rulemix player is ready", text "Open it in Spotify and press play, with shuffle off."
+  - a primary "Open in Spotify" link: a real `<a href="https://open.spotify.com/playlist/<id>" target="_blank" rel="noopener noreferrer">` the user taps. A tap is a user gesture, so phones hand off to the Spotify app; navigating after the poll would not be.
+
   With `canAutoPlay` false, the bar shows "Log in again to enable auto-play" linking to `/api/auth/login`. A failed Play shows the error toast with Retry (re-runs Play).
+- **Per-user lock:** the Player playlist lookup, create-if-missing, overwrite and id store run inside one transaction holding `pg_advisory_xact_lock(hashtextextended('player:<userId>', 0))`. Concurrent Plays (different Mixes, same user) can't create two Player playlists, and their writes to it don't interleave; the later one waits and then overwrites.
 - Save's toast, dialog and Open in Spotify link are unchanged.
 
 ### Testing decisions
 - Seams already in use: packages/spotify against the fake Spotify server; the web run (`performPlay`) and route handlers against the test database + fake Spotify; the MixBuilder component with mocked fetch; Playwright with the e2e fake Spotify.
 - Spotify package: the description option; device lookup (active, none, null id); shuffle-off-then-play request shape and order; `isPlaying` for 204, `is_playing:false`, `true`; `hasPlaybackScopes`.
-- Web run: first Play creates `rulemix player` and stores the id on the user; second Play overwrites the same id; a missing id recreates; duplicates written and Unavailable skipped (same uris as Save would write); each Playback outcome; remote-play error → `not_started` and the run still succeeds; write failure fails the run. Play never calls `uris`-list play.
+- Web run: first Play creates `rulemix player` and stores the id on the user; second Play overwrites the same id; a missing id recreates; duplicates written and Unavailable skipped (same uris as Save would write); each Playback outcome; two concurrent Plays create exactly one Player playlist; remote-play error → `not_started` and the run still succeeds; write failure fails the run. Play never calls `uris`-list play.
 - Route: 202 + kind `play`; 409 while a Save runs; 404 for another user's Mix; status endpoint shows outcome.
-- MixBuilder: Play polls and opens the Player link on success; toast per outcome; re-login hint when `canAutoPlay` is false; Save still works.
-- Playwright: Play on a mix writes the Player playlist and navigates to `open.spotify.com/playlist/…` (intercepted).
+- MixBuilder: Play polls and shows the dialog with the Open in Spotify link on success (no navigation); toast per outcome; re-login hint when `canAutoPlay` is false; Save still works.
+- Playwright: Play on a mix writes the Player playlist and shows the dialog whose Open in Spotify link points at the stored Player playlist, and the page stays on the Mix.
 
 ### Out of scope
 - Queue manipulation, `uris`-list play, pause/skip/seek, device picker, transferring playback.

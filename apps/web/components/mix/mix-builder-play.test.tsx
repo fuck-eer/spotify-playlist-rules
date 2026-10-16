@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MixRow } from "@/lib/db/mixes-repo";
 import type { SaveRunRow } from "@/lib/db/save-runs-repo";
@@ -9,8 +9,6 @@ vi.mock("next/navigation", () => ({
 }));
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
-const openExternal = vi.hoisted(() => vi.fn());
-vi.mock("@/lib/open-external", () => ({ openExternal }));
 
 const MIX: MixRow = {
   id: "m1",
@@ -56,7 +54,6 @@ beforeEach(() => {
   vi.useFakeTimers();
   toast.success.mockReset();
   toast.error.mockReset();
-  openExternal.mockReset();
   runs = [];
   fetchMock = vi.fn<Fetch>((url, init) => {
     if (url === "/api/mixes/m1/play" && init?.method === "POST")
@@ -80,10 +77,16 @@ async function clickPlay() {
   });
 }
 const tick = (ms: number) => act(() => vi.advanceTimersByTimeAsync(ms));
+function expectOpenLink(dialog: HTMLElement): void {
+  const a = within(dialog).getByRole("link", { name: "Open in Spotify" });
+  expect(a.getAttribute("href")).toBe("https://open.spotify.com/playlist/pl9");
+  expect(a.getAttribute("target")).toBe("_blank");
+  expect(a.getAttribute("rel")).toContain("noopener");
+}
 const button = (name: string) => screen.getByRole<HTMLButtonElement>("button", { name });
 
 describe("MixBuilder Play", () => {
-  it("posts Play, shows progress, disables both actions, then opens the Player playlist", async () => {
+  it("posts Play, shows progress, disables both actions, then shows a dialog linking to the Player playlist", async () => {
     runs = [run({ phase: "writing", done: 2, total: 3 }), done({ playback: "started" })];
     render(<MixBuilder mix={MIX} />);
     await clickPlay();
@@ -92,24 +95,28 @@ describe("MixBuilder Play", () => {
     expect(button("Save to Spotify").disabled).toBe(true);
     await tick(1000);
     expect(screen.getByText("Writing 2/3")).toBeTruthy();
-    expect(openExternal).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).toBeNull();
     await tick(1000);
-    expect(toast.success).toHaveBeenCalledWith("Playing on Spotify.");
-    expect(openExternal).toHaveBeenCalledTimes(1);
-    expect(openExternal).toHaveBeenCalledWith("https://open.spotify.com/playlist/pl9");
-    expect(button("Play").disabled).toBe(false);
+    const dialog = screen.getByRole("dialog", { name: "Playing on Spotify" });
+    expect(dialog.textContent).toContain("rulemix player is playing with shuffle off.");
+    expectOpenLink(dialog);
+    expect(window.location.href).not.toContain("open.spotify.com");
+    expect(
+      screen.getByRole<HTMLButtonElement>("button", { name: "Play", hidden: true }).disabled,
+    ).toBe(false);
   });
 
   it.each(["not_started", "no_device", "needs_scopes"] as const)(
-    "%s: says the player is ready and still opens it",
+    "%s: the dialog says the player is ready and links to it",
     async (playback) => {
       runs = [done({ playback })];
       render(<MixBuilder mix={MIX} />);
       await clickPlay();
       await tick(1000);
-      expect(toast.success).toHaveBeenCalledWith("rulemix player is ready. Opening Spotify…");
+      const dialog = screen.getByRole("dialog", { name: "rulemix player is ready" });
+      expect(dialog.textContent).toContain("Open it in Spotify and press play, with shuffle off.");
       expect(toast.error).not.toHaveBeenCalled();
-      expect(openExternal).toHaveBeenCalledWith("https://open.spotify.com/playlist/pl9");
+      expectOpenLink(dialog);
     },
   );
 
@@ -123,7 +130,7 @@ describe("MixBuilder Play", () => {
       { action: { label: string; onClick: () => void } },
     ];
     expect(message).toBe("Spotify access expired. Sign in again.");
-    expect(openExternal).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).toBeNull();
     await act(async () => {
       opts.action.onClick();
       await vi.advanceTimersByTimeAsync(0);

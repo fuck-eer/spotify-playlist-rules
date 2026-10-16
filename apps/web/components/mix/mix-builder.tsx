@@ -39,8 +39,7 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2Icon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import type { RunKind, SaveRunRow } from "@/lib/db/save-runs-repo";
-import { openExternal } from "@/lib/open-external";
+import type { PlaybackOutcome, RunKind, SaveRunRow } from "@/lib/db/save-runs-repo";
 import type { PreviewResponse } from "@/lib/preview";
 import { PreviewPanel, type PreviewState } from "./preview-panel";
 import { RuleCard } from "./rule-card";
@@ -93,6 +92,9 @@ export function MixBuilder({
   const nameRef = useRef<HTMLInputElement>(null);
   const [targetId, setTargetId] = useState<string | null>(mix?.targetPlaylistId ?? null);
   const [savedDialog, setSavedDialog] = useState(false);
+  const [played, setPlayed] = useState<{ playlistId: string; playback: PlaybackOutcome } | null>(
+    null,
+  );
   const [rules, setRules] = useState<MixRuleRow[]>(initialRules);
   const [rulePickerOpen, setRulePickerOpen] = useState(false);
   const [library, setLibrary] = useState<RulesState>({ status: "idle", rules: [] });
@@ -418,12 +420,11 @@ export function MixBuilder({
           setSaveRunId(null);
           setSaveRun(null);
           if (run.status === "succeeded" && run.kind === "play") {
-            toast.success(
-              run.playback === "started"
-                ? "Playing on Spotify."
-                : "rulemix player is ready. Opening Spotify…",
-            );
-            if (run.playlistId) openExternal(spotifyUrl(run.playlistId));
+            // A dialog with a real link the user taps: opening after the poll has no user
+            // gesture, so phones may not hand off to the Spotify app (ADR-0022).
+            if (run.playlistId) {
+              setPlayed({ playlistId: run.playlistId, playback: run.playback ?? "not_started" });
+            }
           } else if (run.status === "succeeded") {
             const base = `Saved "${targetName(savedName)}" to Spotify. Play it with shuffle off.`;
             toast.success(
@@ -761,6 +762,37 @@ export function MixBuilder({
                 </a>
               </DialogFooter>
             </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={played !== null}
+        onOpenChange={(o) => {
+          if (!o) setPlayed(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {played?.playback === "started" ? "Playing on Spotify" : "rulemix player is ready"}
+            </DialogTitle>
+            <DialogDescription>
+              {played?.playback === "started"
+                ? "rulemix player is playing with shuffle off."
+                : "Open it in Spotify and press play, with shuffle off."}
+            </DialogDescription>
+          </DialogHeader>
+          {played ? (
+            <DialogFooter>
+              <a
+                href={spotifyUrl(played.playlistId)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-full bg-[#1DB954] px-5 py-3 text-center text-[15px] font-bold text-black"
+              >
+                Open in Spotify
+              </a>
+            </DialogFooter>
           ) : null}
         </DialogContent>
       </Dialog>

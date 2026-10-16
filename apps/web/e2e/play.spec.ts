@@ -8,7 +8,9 @@ import { seedSession } from "./helpers/session";
 const DB =
   process.env.TEST_DATABASE_URL ?? "postgres://postgres:postgres@127.0.0.1:54322/rulemix_test";
 
-test("Play writes the rulemix player playlist and opens it in Spotify", async ({ page }) => {
+test("Play writes the rulemix player playlist and shows a dialog linking to it", async ({
+  page,
+}) => {
   const { userId } = await seedSession(page);
   const restore = applyTestEnv();
   const sql = createSql(DB);
@@ -27,20 +29,23 @@ test("Play writes the rulemix player playlist and opens it in Spotify", async ({
     restore();
   }
 
-  await page.route("https://open.spotify.com/**", (route) =>
-    route.fulfill({ contentType: "text/html", body: "<title>Spotify</title>" }),
-  );
   await page.goto(`/mixes/${mixId}`);
   // Seeded without playback scopes, like a user from before phase 1.
   await expect(page.getByRole("link", { name: "Log in again to enable auto-play" })).toBeVisible();
   await page.getByRole("button", { name: "Play" }).click();
-  await page.waitForURL(/^https:\/\/open\.spotify\.com\/playlist\/.+/, { timeout: 30_000 });
+  const dialog = page.getByRole("dialog", { name: "rulemix player is ready" });
+  await expect(dialog).toBeVisible({ timeout: 30_000 });
+  const open = dialog.getByRole("link", { name: "Open in Spotify" });
 
   const check = createSql(DB);
   try {
     const [u] = await check<{ p: string | null }[]>`
       select player_playlist_id p from users where id = ${FAKE_ME}`;
-    expect(page.url()).toBe(`https://open.spotify.com/playlist/${u!.p}`);
+    expect(u!.p).toBeTruthy();
+    await expect(open).toHaveAttribute("href", `https://open.spotify.com/playlist/${u!.p}`);
+    await expect(open).toHaveAttribute("target", "_blank");
+    // No auto-navigation: we stay on the mix page.
+    expect(page.url()).toContain(`/mixes/${mixId}`);
   } finally {
     await check.end({ timeout: 1 });
   }
