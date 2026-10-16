@@ -1,0 +1,2 @@
+CREATE DATABASE rulemix;
+CREATE DATABASE rulemix_test;

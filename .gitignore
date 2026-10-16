@@ -1,0 +1,12 @@
+node_modules
+.next
+dist
+.turbo
+.env*.local
+coverage
+playwright-report
+test-results
+spikes/**/result.json
+spikes/**/*.log
+next-env.d.ts
+*.tsbuildinfo

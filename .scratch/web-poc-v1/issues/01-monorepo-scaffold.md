@@ -1,6 +1,6 @@
 # 01: Monorepo scaffold
 
-**Status:** ready-for-agent
+**Status:** done
 **Type:** task
 **Blocked by:** None (can start immediately)
 **Glossary terms:** none (infrastructure)
@@ -59,8 +59,8 @@ An empty, green monorepo. Running `pnpm i && pnpm typecheck && pnpm lint && pnpm
 - `apps/web/e2e/home.spec.ts`: GET `/` has status 200 and the text "rulemix" is visible.
 
 ## Acceptance criteria
-- [ ] `pnpm i` works with a committed `pnpm-lock.yaml`
-- [ ] `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build` all exit 0
-- [ ] `pnpm test:e2e` passes locally
-- [ ] Tailwind classes such as `bg-bg text-tx` resolve to the mockup colours
-- [ ] No secrets committed; `.env.example` lists all variables
+- [x] `pnpm i` works with a committed `pnpm-lock.yaml`
+- [x] `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build` all exit 0
+- [x] `pnpm test:e2e` passes locally
+- [x] Tailwind classes such as `bg-bg text-tx` resolve to the mockup colours
+- [x] No secrets committed; `.env.example` lists all variables
