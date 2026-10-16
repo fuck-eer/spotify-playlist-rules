@@ -4,7 +4,7 @@
 
 **Blocked by:** v2-web/01
 
-**Status:** ready-for-agent
+**Status:** done (fixture mutation check: changing 15-manual-order expected.stats.total broke both suites, 2026-10-17)
 
 **Glossary:** Original song, Rule copy, Manual order, Bench, Seed. **ADRs:** 0027–0031.
 

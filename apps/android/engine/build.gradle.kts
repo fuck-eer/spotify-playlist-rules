@@ -17,4 +17,8 @@ dependencies {
 // The shared fixtures are the contract (ADR-0031): same files as the TS engine.
 sourceSets["test"].resources.srcDir("../../../packages/rules-engine/fixtures")
 
-tasks.test { useJUnitPlatform() }
+tasks.test {
+    useJUnitPlatform()
+    systemProperty("rulemix.engineDir", file("../../../packages/rules-engine").absolutePath)
+    inputs.dir("../../../packages/rules-engine/fixtures")
+}
