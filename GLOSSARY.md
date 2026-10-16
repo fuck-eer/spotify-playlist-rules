@@ -14,4 +14,7 @@
 - **Archive**: hiding a Rule from the active library without deleting it; the alternative offered when a Rule in use can't be deleted.
 - **Unavailable track**: a source item that comes back null, local or not playable. Skipped from the output; counted in the Preview (ADR-0011).
 - **Regenerate**: recompute the Preview only; never writes to Spotify (ADR-0013).
-- **Save to Spotify**: the explicit action that writes the engine output to the Target playlist.
+- **Save to Spotify**: the explicit, optional action that writes the engine output to the Mix's Target playlist.
+- **Player playlist**: the one private playlist per user, `rulemix player`, that Play overwrites with a Mix's engine output. Tracked by ID per user; recreated if missing (ADR-0021).
+- **Play**: the primary Mix action: write the engine output to the Player playlist, start it on the user's active Spotify device when possible (shuffle off, ADR-0022), then open it in Spotify.
+- **Playback outcome**: the result of Play's remote-play step: `started`, `not_started`, `no_device` or `needs_scopes` (ADR-0022, ADR-0023).
