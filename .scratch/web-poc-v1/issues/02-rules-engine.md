@@ -1,6 +1,6 @@
 # 02: Rules engine: build() with all v1 rules, shared fixtures
 
-**Status:** ready-for-agent
+**Status:** done
 **Type:** task
 **Blocked by:** 01
 **Glossary terms:** Rule, Mix, Rule Set, Base list, Source playlist, Pin first, Insert every N, Repeat N times, Seed, Preview, Unavailable track
@@ -105,7 +105,7 @@ Use URIs of the form `spotify:track:T01`…`spotify:track:T20` in fixtures (any 
 5. `describe.test.ts`: exact strings for every kind, using n=4.
 
 ## Acceptance criteria
-- [ ] The interface above is exported exactly from `@rulemix/rules-engine`
-- [ ] All tests pass; typecheck and lint pass
-- [ ] No imports of Node or browser APIs in `src/` (pure)
-- [ ] 12 fixture files plus a README
+- [x] The interface above is exported exactly from `@rulemix/rules-engine`
+- [x] All tests pass; typecheck and lint pass
+- [x] No imports of Node or browser APIs in `src/` (pure)
+- [x] 12 fixture files plus a README

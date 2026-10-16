@@ -1,0 +1,83 @@
+{
+  "name": "Pin first moves the song to slot 0",
+  "input": {
+    "source": [
+      {
+        "uri": "spotify:track:T01",
+        "name": "Song 01",
+        "artists": ["Artist"]
+      },
+      {
+        "uri": "spotify:track:T02",
+        "name": "Song 02",
+        "artists": ["Artist"]
+      },
+      {
+        "uri": "spotify:track:T03",
+        "name": "Song 03",
+        "artists": ["Artist"]
+      },
+      {
+        "uri": "spotify:track:T04",
+        "name": "Song 04",
+        "artists": ["Artist"]
+      },
+      {
+        "uri": "spotify:track:T05",
+        "name": "Song 05",
+        "artists": ["Artist"]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "pin_first",
+        "uri": "spotify:track:T03",
+        "n": null
+      }
+    ],
+    "keepSourceOrder": true,
+    "seed": 0
+  },
+  "expected": {
+    "uris": [
+      "spotify:track:T03",
+      "spotify:track:T01",
+      "spotify:track:T02",
+      "spotify:track:T04",
+      "spotify:track:T05"
+    ],
+    "preview": [
+      {
+        "uri": "spotify:track:T03",
+        "ruleIndex": 0,
+        "shiftedFrom": null
+      },
+      {
+        "uri": "spotify:track:T01",
+        "ruleIndex": null,
+        "shiftedFrom": null
+      },
+      {
+        "uri": "spotify:track:T02",
+        "ruleIndex": null,
+        "shiftedFrom": null
+      },
+      {
+        "uri": "spotify:track:T04",
+        "ruleIndex": null,
+        "shiftedFrom": null
+      },
+      {
+        "uri": "spotify:track:T05",
+        "ruleIndex": null,
+        "shiftedFrom": null
+      }
+    ],
+    "issues": [],
+    "stats": {
+      "total": 5,
+      "rulesApplied": 1,
+      "skippedUnavailable": 0
+    }
+  }
+}
