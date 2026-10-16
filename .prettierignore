@@ -12,3 +12,5 @@ test-results/
 pnpm-lock.yaml
 docs
 .scratch
+# Android (Gradle output; Kotlin is not Prettier-formatted)
+apps/android/

@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 **ADRs:** 0031, 0032. **Design:** `tokens.json`, `android-notes.md` (Tokens, Gradients), shot `mobile.png`.
 
