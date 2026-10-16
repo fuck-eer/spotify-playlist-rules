@@ -1,6 +1,6 @@
 import type postgres from "postgres";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { canReachTestDb, insertTestUser, resetTestDb } from "./test-utils";
+import { canReachTestDb, closeTestDb, insertTestUser, resetTestDb } from "./test-utils";
 import { createMix, deleteMix, getMix, listMixes, randomSeed, updateMix } from "./mixes-repo";
 
 const reachable = await canReachTestDb();
@@ -25,7 +25,7 @@ describe.skipIf(!reachable)("mixes repo", () => {
     user = (await insertTestUser(sql)).id;
   });
   afterAll(async () => {
-    await sql.end();
+    await closeTestDb();
   });
 
   it("creates a mix with the given seed and lists newest-updated first", async () => {

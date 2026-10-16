@@ -5,7 +5,7 @@ import { DELETE, GET as getOne, PATCH } from "../app/api/mixes/[id]/route";
 import { GET as list, POST } from "../app/api/mixes/route";
 import { getSql } from "./db/client";
 import type { MixRow } from "./db/mixes-repo";
-import { canReachTestDb, resetTestDb } from "./db/test-utils";
+import { canReachTestDb, closeTestDb, resetTestDb } from "./db/test-utils";
 import { req, signInFakeUser, startRouteHarness } from "./testing/route-harness";
 
 const reachable = await canReachTestDb();
@@ -26,7 +26,7 @@ describe.skipIf(!reachable)("mixes routes", () => {
   });
   afterAll(async () => {
     await getSql().end();
-    await sql.end();
+    await closeTestDb();
     await fake.close();
     restore();
   });

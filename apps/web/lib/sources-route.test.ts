@@ -3,7 +3,7 @@ import type postgres from "postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { GET } from "../app/api/sources/route";
 import { getSql } from "./db/client";
-import { canReachTestDb, resetTestDb } from "./db/test-utils";
+import { canReachTestDb, closeTestDb, resetTestDb } from "./db/test-utils";
 import { req, signInFakeUser, startRouteHarness } from "./testing/route-harness";
 
 const reachable = await canReachTestDb();
@@ -23,7 +23,7 @@ describe.skipIf(!reachable)("GET /api/sources", () => {
   });
   afterAll(async () => {
     await getSql().end();
-    await sql.end();
+    await closeTestDb();
     await fake.close();
     restore();
   });

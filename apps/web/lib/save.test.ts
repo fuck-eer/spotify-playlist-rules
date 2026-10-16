@@ -8,7 +8,7 @@ import { addMixRule } from "./db/mix-rules-repo";
 import { createMix, getMix } from "./db/mixes-repo";
 import { createRule } from "./db/rules-repo";
 import { getRun, startRun } from "./db/save-runs-repo";
-import { canReachTestDb, resetTestDb } from "./db/test-utils";
+import { canReachTestDb, closeTestDb, resetTestDb } from "./db/test-utils";
 import { performSave } from "./save";
 import { spotifyConfig } from "./spotify-config";
 import { FAKE_ME } from "./testing/fake-library";
@@ -65,7 +65,7 @@ describe.skipIf(!reachable)("performSave", () => {
   });
   afterAll(async () => {
     await getSql().end();
-    await sql.end();
+    await closeTestDb();
     await fake.close();
     restore();
   });

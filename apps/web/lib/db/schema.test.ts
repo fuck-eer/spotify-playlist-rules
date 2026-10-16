@@ -1,7 +1,7 @@
 import type postgres from "postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { migrate } from "./migrate";
-import { canReachTestDb, insertTestUser, resetTestDb } from "./test-utils";
+import { canReachTestDb, closeTestDb, insertTestUser, resetTestDb } from "./test-utils";
 
 const reachable = await canReachTestDb();
 if (!reachable) console.warn("[schema.test] TEST_DATABASE_URL unreachable: skipping DB tests");
@@ -24,7 +24,7 @@ describe.skipIf(!reachable)("database schema", () => {
     sql = await resetTestDb();
   });
   afterAll(async () => {
-    await sql.end();
+    await closeTestDb();
   });
 
   async function rule(userId: string, kind = "every_n", n: number | null = 3) {

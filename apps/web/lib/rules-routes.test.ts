@@ -5,7 +5,7 @@ import { GET as getOne, DELETE as del, PATCH as patch } from "../app/api/rules/[
 import { GET as list, POST as create } from "../app/api/rules/route";
 import { createSession, SESSION_COOKIE } from "./auth/session";
 import { createRule } from "./db/rules-repo";
-import { canReachTestDb, insertTestUser, resetTestDb } from "./db/test-utils";
+import { canReachTestDb, closeTestDb, insertTestUser, resetTestDb } from "./db/test-utils";
 import { useTestEnv } from "./test-env";
 
 const reachable = await canReachTestDb();
@@ -33,7 +33,7 @@ describe.skipIf(!reachable)("rules routes", () => {
   });
   afterAll(async () => {
     restore();
-    await sql.end();
+    await closeTestDb();
   });
 
   function req(path: string, method = "GET", body?: unknown, auth = true): NextRequest {

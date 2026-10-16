@@ -26,20 +26,20 @@ export async function canReachTestDb(): Promise<boolean> {
 
 /** Migrates TEST_DATABASE_URL once per process, then truncates all app tables. */
 export async function resetTestDb(): Promise<postgres.Sql> {
-  if (!shared) {
-    const sql = createSql(testUrl());
-    shared = sql;
-    sql.end = ((end) => (opts?: { timeout?: number }) => {
-      shared = undefined;
-      migrated = undefined;
-      return end(opts);
-    })(sql.end.bind(sql));
-  }
+  shared ??= createSql(testUrl());
   const sql = shared;
   migrated ??= migrate(sql, { log: () => {} });
   await migrated;
   await sql.unsafe(`truncate ${APP_TABLES.join(", ")} restart identity cascade`);
   return sql;
+}
+
+/** Ends the shared test client and forgets it, so the next resetTestDb() starts fresh. */
+export async function closeTestDb(): Promise<void> {
+  const sql = shared;
+  shared = undefined;
+  migrated = undefined;
+  if (sql) await sql.end({ timeout: 5 });
 }
 
 export interface TestUserOverrides {

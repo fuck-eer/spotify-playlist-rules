@@ -9,7 +9,7 @@ import { getSql } from "./db/client";
 import type { MixRuleRow } from "./db/mix-rules-repo";
 import { createMix } from "./db/mixes-repo";
 import { createRule, updateRule } from "./db/rules-repo";
-import { canReachTestDb, resetTestDb } from "./db/test-utils";
+import { canReachTestDb, closeTestDb, resetTestDb } from "./db/test-utils";
 import { resetEnvCache } from "./env";
 import { FAKE_ME } from "./testing/fake-library";
 import { req, signInFakeUser, startRouteHarness } from "./testing/route-harness";
@@ -45,7 +45,7 @@ describe.skipIf(!reachable)("mix rules routes", () => {
   });
   afterAll(async () => {
     await getSql().end();
-    await sql.end();
+    await closeTestDb();
     await fake.close();
     restore();
   });

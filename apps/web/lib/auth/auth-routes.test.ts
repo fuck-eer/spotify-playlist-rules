@@ -9,7 +9,7 @@ import { POST as logout } from "../../app/api/auth/logout/route";
 import { GET as me } from "../../app/api/me/route";
 import { sign } from "../crypto";
 import { getSql } from "../db/client";
-import { canReachTestDb, resetTestDb } from "../db/test-utils";
+import { canReachTestDb, closeTestDb, resetTestDb } from "../db/test-utils";
 import { useTestEnv } from "../test-env";
 import { createSession, getSessionUser, SESSION_COOKIE } from "./session";
 
@@ -65,7 +65,7 @@ describe.skipIf(!reachable)("auth routes", () => {
   });
   afterAll(async () => {
     await getSql().end();
-    await sql.end();
+    await closeTestDb();
     await fake.close();
     restore();
   });

@@ -5,7 +5,7 @@ import { GET as preview } from "../app/api/mixes/[id]/preview/route";
 import { POST as reshuffle } from "../app/api/mixes/[id]/reshuffle/route";
 import { getSql } from "./db/client";
 import { createMix, getMix } from "./db/mixes-repo";
-import { canReachTestDb, resetTestDb } from "./db/test-utils";
+import { canReachTestDb, closeTestDb, resetTestDb } from "./db/test-utils";
 import type { PreviewResponse } from "./preview";
 import { FAKE_ME } from "./testing/fake-library";
 import { req, signInFakeUser, startRouteHarness } from "./testing/route-harness";
@@ -38,7 +38,7 @@ describe.skipIf(!reachable)("preview and reshuffle routes", () => {
   });
   afterAll(async () => {
     await getSql().end();
-    await sql.end();
+    await closeTestDb();
     await fake.close();
     restore();
   });

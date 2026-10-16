@@ -3,7 +3,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { addMixRule, listMixRules, removeMixRule, reorderMixRules } from "./mix-rules-repo";
 import { createMix } from "./mixes-repo";
 import { createRule, updateRule } from "./rules-repo";
-import { canReachTestDb, insertTestUser, resetTestDb } from "./test-utils";
+import { canReachTestDb, closeTestDb, insertTestUser, resetTestDb } from "./test-utils";
 
 const reachable = await canReachTestDb();
 if (!reachable) console.warn("[mix-rules-repo.test] TEST_DATABASE_URL unreachable: skipping");
@@ -30,7 +30,7 @@ describe.skipIf(!reachable)("mix rules repo", () => {
     ruleId = (await createRule(sql, user, { kind: "every_n", n: 4 })).id;
   });
   afterAll(async () => {
-    await sql.end();
+    await closeTestDb();
   });
 
   async function add(uri: string, max = 10) {

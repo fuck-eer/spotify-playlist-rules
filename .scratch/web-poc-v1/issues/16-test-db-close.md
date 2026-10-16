@@ -1,6 +1,6 @@
 # 16: Explicit closeTestDb() instead of the sql.end monkey-patch
 
-**Status:** ready-for-agent
+**Status:** done
 **Type:** task
 **Refs:** review S2
 
@@ -11,4 +11,4 @@
 - `test-utils.test.ts`: after `closeTestDb()`, `resetTestDb()` returns a fresh, working client; `sql.end` on the returned client is the driver's own.
 
 ## Acceptance criteria
-- [ ] No monkey-patching in test utils; all DB tests pass
+- [x] No monkey-patching in test utils; all DB tests pass

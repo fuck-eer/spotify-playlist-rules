@@ -1,6 +1,6 @@
 import type postgres from "postgres";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { canReachTestDb, insertTestUser, resetTestDb } from "../db/test-utils";
+import { canReachTestDb, closeTestDb, insertTestUser, resetTestDb } from "../db/test-utils";
 import { createSession, destroySession, getSessionUser } from "./session";
 
 const reachable = await canReachTestDb();
@@ -12,7 +12,7 @@ describe.skipIf(!reachable)("sessions", () => {
     sql = await resetTestDb();
   });
   afterAll(async () => {
-    await sql.end();
+    await closeTestDb();
   });
 
   it("create then get returns the user", async () => {

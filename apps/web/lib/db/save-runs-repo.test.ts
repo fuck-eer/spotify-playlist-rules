@@ -9,7 +9,7 @@ import {
   startRun,
   updateRun,
 } from "./save-runs-repo";
-import { canReachTestDb, insertTestUser, resetTestDb } from "./test-utils";
+import { canReachTestDb, closeTestDb, insertTestUser, resetTestDb } from "./test-utils";
 
 const reachable = await canReachTestDb();
 if (!reachable) console.warn("[save-runs-repo.test] TEST_DATABASE_URL unreachable: skipping");
@@ -38,7 +38,7 @@ describe.skipIf(!reachable)("save runs repo", () => {
   }
 
   afterAll(async () => {
-    await sql.end();
+    await closeTestDb();
   });
 
   it("runs through its lifecycle", async () => {

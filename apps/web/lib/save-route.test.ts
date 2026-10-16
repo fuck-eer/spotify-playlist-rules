@@ -7,7 +7,7 @@ import { createSession } from "./auth/session";
 import { getSql } from "./db/client";
 import { createMix } from "./db/mixes-repo";
 import type { SaveRunRow } from "./db/save-runs-repo";
-import { canReachTestDb, insertTestUser, resetTestDb } from "./db/test-utils";
+import { canReachTestDb, closeTestDb, insertTestUser, resetTestDb } from "./db/test-utils";
 import { FAKE_ME } from "./testing/fake-library";
 import { installFakeWrites } from "./testing/fake-writes";
 import { req, signInFakeUser, startRouteHarness } from "./testing/route-harness";
@@ -67,7 +67,7 @@ describe.skipIf(!reachable)("save routes", () => {
   });
   afterAll(async () => {
     await getSql().end();
-    await sql.end();
+    await closeTestDb();
     await fake.close();
     restore();
   });

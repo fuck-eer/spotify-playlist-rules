@@ -1,7 +1,7 @@
 import type postgres from "postgres";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createRule, deleteRule, getRule, listRules, updateRule } from "./rules-repo";
-import { canReachTestDb, insertTestUser, resetTestDb } from "./test-utils";
+import { canReachTestDb, closeTestDb, insertTestUser, resetTestDb } from "./test-utils";
 
 const reachable = await canReachTestDb();
 if (!reachable) console.warn("[rules-repo.test] TEST_DATABASE_URL unreachable: skipping");
@@ -14,7 +14,7 @@ describe.skipIf(!reachable)("rules repo", () => {
     u = (await insertTestUser(sql)).id;
   });
   afterAll(async () => {
-    await sql.end();
+    await closeTestDb();
   });
 
   async function useInMix(ruleId: string, positions = 1): Promise<void> {
