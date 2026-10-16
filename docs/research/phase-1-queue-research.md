@@ -129,3 +129,15 @@ Next tests:
 - ask on the Spotify developer forum.
 
 **Design impact:** treat Web API playback control of the phone as **unproven**. Always confirm with `currently-playing` after `play`. On Android, prefer the App Remote SDK, which talks to the local app directly.
+
+## Android spike results (2026-10-17)
+
+Spike: `spikes/android-queue` (Kotlin, Spotify App Remote 0.8.0 + auth 2.1.0), on Nishchay's OnePlus 12 with Spotify Premium.
+
+- **Connecting:** v0.1 hung at "Connecting…" with no callback. That's the known Android 14 issue of Spotify's auth screen being blocked from the background (spotify/android-sdk#361, #377). Fixed by explicit `AuthorizationClient` login first, then connect with `showAuthView(false)`, and targetSdk 33. **LOGIN then CONNECT works.**
+- **Exact sequence with repeats:** `play(A)` then `queue(B)`, `queue(B)`, `queue(C)`, `queue(A)` played **A, B, B, C, A** (by ear). ✅ The on-screen log showed A,B,C,A because it logged only on URI change; v0.3 also counts a same-URI position reset as a new play.
+- **Clear or replace the queue:** queue C,C then `play(D)`, and the next track was C. **`play()` does not clear the queue, and there is no clear-queue API.** ❌
+- **Player state:** pushed via `subscribeToPlayerState`. ✅
+- **Lifecycle:** the spike disconnects in `onStop` per Spotify guidance, so monitoring only runs while the app is visible.
+
+**Decision (ADR-0025):** the Android app is queue-based (play the first track, queue the rest). Pre-existing queue items are an open problem; the options are skip-until-ours via PlayerState, a fallback to the Player playlist, warning the user, or detecting them with Web API `GET /me/player/queue`.
