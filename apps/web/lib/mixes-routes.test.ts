@@ -6,6 +6,8 @@ import { GET as list, POST } from "../app/api/mixes/route";
 import { getSql } from "./db/client";
 import type { MixRow } from "./db/mixes-repo";
 import { canReachTestDb, closeTestDb, resetTestDb } from "./db/test-utils";
+import { createSession } from "./auth/session";
+import { FAKE_ME } from "./testing/fake-library";
 import { req, signInFakeUser, startRouteHarness } from "./testing/route-harness";
 
 const reachable = await canReachTestDb();
@@ -56,6 +58,21 @@ describe.skipIf(!reachable)("mixes routes", () => {
 
   it("rejects an invalid body with 400", async () => {
     expect((await create({ name: "", source: { type: "liked" } })).status).toBe(400);
+  });
+
+  it("GET /api/mixes accepts a Bearer token (ADR-0034); the cookie path is unchanged", async () => {
+    const created = await create({ name: "Gym", source: { type: "playlist", id: "pl-own" } });
+    const { mix } = (await created.json()) as { mix: MixRow };
+    const token = await createSession(sql, FAKE_ME, "mobile");
+    const r = req("/api/mixes", null);
+    r.headers.set("authorization", `Bearer ${token}`);
+    const res = await list(r);
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { mixes: MixRow[] }).mixes.map((m) => m.id)).toEqual([mix.id]);
+    const bad = req("/api/mixes", cookie);
+    bad.headers.set("authorization", "Bearer nope");
+    expect((await list(bad)).status).toBe(401);
+    expect((await list(req("/api/mixes", cookie))).status).toBe(200);
   });
 
   it("creates, lists, renames and deletes a mix", async () => {

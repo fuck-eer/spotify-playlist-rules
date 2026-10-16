@@ -76,18 +76,16 @@ async function postToken(
 
 export function exchangeCode(
   cfg: SpotifyConfig,
-  p: { code: string; verifier: string },
+  p: { code: string; verifier?: string; redirectUri?: string },
 ): Promise<TokenSet> {
-  return postToken(
-    cfg,
-    {
-      grant_type: "authorization_code",
-      code: p.code,
-      redirect_uri: cfg.redirectUri,
-      code_verifier: p.verifier,
-    },
-    null,
-  );
+  const form: Record<string, string> = {
+    grant_type: "authorization_code",
+    code: p.code,
+    redirect_uri: p.redirectUri ?? cfg.redirectUri,
+  };
+  // Mobile (ADR-0034) uses the Spotify auth library's code flow without PKCE.
+  if (p.verifier !== undefined) form.code_verifier = p.verifier;
+  return postToken(cfg, form, null);
 }
 
 export function refreshAccessToken(cfg: SpotifyConfig, refreshToken: string): Promise<TokenSet> {

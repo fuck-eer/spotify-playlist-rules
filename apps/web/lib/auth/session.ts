@@ -17,13 +17,29 @@ function hash(raw: string): string {
   return createHash("sha256").update(raw).digest("hex");
 }
 
-/** Creates a session row and returns the raw cookie value (only its sha256 is stored). */
-export async function createSession(sql: postgres.Sql, userId: string): Promise<string> {
+/** Creates a session row and returns the raw cookie/Bearer value (only its sha256 is stored). */
+export async function createSession(
+  sql: postgres.Sql,
+  userId: string,
+  kind: "web" | "mobile" = "web",
+): Promise<string> {
   const raw = randomBytes(32).toString("base64url");
   await sql`
-    insert into sessions (id_hash, user_id, expires_at)
-    values (${hash(raw)}, ${userId}, now() + make_interval(days => ${SESSION_TTL_DAYS}))`;
+    insert into sessions (id_hash, user_id, expires_at, kind)
+    values (${hash(raw)}, ${userId}, now() + make_interval(days => ${SESSION_TTL_DAYS}), ${kind})`;
   return raw;
+}
+
+export interface RequestLike {
+  cookies: { get(name: string): { value: string } | undefined };
+  headers?: { get(name: string): string | null };
+}
+
+/** The Bearer token from `Authorization: Bearer <token>` (ADR-0034), if any. */
+export function bearerToken(req: RequestLike): string | undefined {
+  const h = req.headers?.get("authorization");
+  const m = h ? /^Bearer\s+(\S+)$/i.exec(h) : null;
+  return m?.[1];
 }
 
 export async function getSessionUser(
@@ -69,10 +85,12 @@ export async function optionalUser(): Promise<SessionUser | null> {
   return currentUser();
 }
 
-/** Session user from a route handler's request cookies (works without request context). */
+/** Session user from a request: Bearer token first (Android, ADR-0034), then the cookie. */
 export async function userFromRequest(
   sql: postgres.Sql,
-  req: { cookies: { get(name: string): { value: string } | undefined } },
+  req: RequestLike,
 ): Promise<SessionUser | null> {
+  const bearer = bearerToken(req);
+  if (bearer) return getSessionUser(sql, bearer);
   return getSessionUser(sql, req.cookies.get(SESSION_COOKIE)?.value);
 }

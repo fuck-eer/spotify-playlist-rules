@@ -4,7 +4,7 @@
 
 **Blocked by:** **Nishchay's approval of ADR-0034** (proposed). v2-web/02 (migration 0006 adds `sessions.kind`).
 
-**Status:** blocked (approval)
+**Status:** done
 
 **Glossary:** none new. **ADRs:** 0009, 0032, 0034.
 
