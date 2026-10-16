@@ -137,7 +137,8 @@ Spotify only gives me play, pause, skip and shuffle. I can't say "this song alwa
 ### Data model (Supabase)
 
 **users**
-- `spotify_user_id` (PK)
+- `id` (PK, the Spotify user id from `/me`)
+- `account_id` (the newer `/me` account id when present, A3)
 - `display_name`
 - `refresh_token_encrypted`
 - `access_token`, `access_token_expires_at` (optional cache)
@@ -146,7 +147,7 @@ Spotify only gives me play, pause, skip and shuffle. I can't say "this song alwa
 - `created_at`
 
 **sessions**
-- `id`
+- `id_hash` (PK, sha256 of the cookie value)
 - `user_id`
 - `expires_at`
 - `created_at`
@@ -165,7 +166,8 @@ Spotify only gives me play, pause, skip and shuffle. I can't say "this song alwa
 - `user_id`
 - `name`
 - `source_type` (playlist | liked)
-- `source_playlist_id`
+- `source_playlist_id` (null for Liked Songs)
+- `source_name` (display name for Home)
 - `keep_source_order` (bool, default false)
 - `shuffle_seed`
 - `target_playlist_id` (nullable)
@@ -176,7 +178,7 @@ Spotify only gives me play, pause, skip and shuffle. I can't say "this song alwa
 **mix_rules**
 - `id`
 - `mix_id`
-- `rule_id` (FK, ON DELETE RESTRICT, which enforces "can't delete a rule in use")
+- `rule_id` (FK, `NO ACTION DEFERRABLE INITIALLY DEFERRED`: deleting a rule in use still fails with 23503, while deleting a user cascades through rules and mixes in one statement)
 - `position`
 - `track_uri`
 
@@ -188,6 +190,7 @@ Constraints:
 - `id`
 - `mix_id`
 - `started_at`, `finished_at`
+- `updated_at` (heartbeat, bumped on each progress update; a running run with no heartbeat for 5 minutes is marked failed)
 - `status`
 - `error`
 - `phase`
@@ -196,6 +199,9 @@ Constraints:
 - `tracks_written`
 - `recreated` (bool)
 - `retries_429`
+
+Constraints:
+- At most one `running` run per Mix (partial unique index `save_runs_one_running`).
 
 **track_cache** (short-lived preview labels)
 - `uri`

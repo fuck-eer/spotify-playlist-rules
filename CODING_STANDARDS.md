@@ -9,7 +9,7 @@
   - vitest (unit and integration);
   - fast-check (property-based tests in `packages/rules-engine`);
   - Playwright (end-to-end, `apps/web/e2e`).
-- **Database:** Supabase Postgres, reached via the `postgres` npm driver with `DATABASE_URL`, server-only. Plain SQL migrations in `supabase/migrations/NNNN_name.sql`. Local and test databases run in Docker (`docker compose up db`). Don't create hosted projects or anything paid without asking Nishchay (ADR-0008).
+- **Database:** Supabase Postgres, reached via the `postgres` npm driver with `DATABASE_URL`, server-only. Plain SQL migrations in `supabase/migrations/NNNN_name.sql`. Local and test databases: Postgres 16 on 127.0.0.1:54322 with `rulemix` and `rulemix_test`, via `docker compose up -d db` or the native cluster (`sudo pg_ctlcluster 16 main start`); see README. Don't create hosted projects or anything paid without asking Nishchay (ADR-0008).
 
 ## Commands (root)
 - `pnpm build` · `pnpm dev` · `pnpm typecheck` · `pnpm lint` · `pnpm test` · `pnpm test:e2e` · `pnpm db:migrate` · `pnpm format`
