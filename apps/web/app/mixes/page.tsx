@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AccountMenu } from "@/components/account-menu";
 import { Logo } from "@/components/logo";
 import { MixList } from "@/components/mix/mix-list";
 import { RulesIconLink } from "@/components/mix/rules-icon-link";
@@ -19,14 +20,10 @@ export default async function MixesPage() {
         <Logo className="[&>span:last-child]:text-lg" />
         <h1 className="flex-1 text-[26px] font-extrabold tracking-tight">Mixes</h1>
         <RulesIconLink />
+        <AccountMenu />
       </div>
       <div className="flex-1 px-4 pb-32">
         <MixList mixes={mixes} />
-        <form action="/api/auth/logout" method="post" className="mt-8">
-          <button type="submit" className="text-xs text-dim underline">
-            Sign out
-          </button>
-        </form>
       </div>
       <Button
         asChild

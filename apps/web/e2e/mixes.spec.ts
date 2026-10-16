@@ -44,4 +44,8 @@ test("create a mix from Liked Songs, see it on Home, then delete it", async ({ p
   await page.getByRole("button", { name: "Delete" }).click();
   await expect(page).toHaveURL(/\/mixes$/);
   await expect(page.getByText("No mixes yet")).toBeVisible();
+
+  await page.getByRole("button", { name: "Account" }).click();
+  await page.getByRole("menuitem", { name: "Sign out" }).click();
+  await expect(page).not.toHaveURL(/\/mixes/);
 });
