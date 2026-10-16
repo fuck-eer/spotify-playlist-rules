@@ -7,6 +7,7 @@ const track = (id: string, name: string, artist: string) => ({
   name,
   type: "track",
   artists: [{ name: artist }],
+  album: { images: [{ url: `https://img.test/${id}.jpg`, width: 300 }] },
 });
 export const FAKE_TRACKS = {
   sunrise: track("sunrise", "Sunrise", "Kavi"),

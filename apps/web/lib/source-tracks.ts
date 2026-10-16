@@ -45,11 +45,12 @@ async function cacheTracks(sql: postgres.Sql, items: (TrackItem | null)[]): Prom
   if (byUri.size === 0) return;
   const rows = [...byUri.values()];
   await sql`
-    insert into track_cache (uri, name, artists, fetched_at)
-    select u.uri, u.name, array(select jsonb_array_elements_text(u.artists)), now()
-    from jsonb_to_recordset(${sql.json(rows.map((t) => ({ uri: t.uri, name: t.name, artists: t.artists })))})
-      as u(uri text, name text, artists jsonb)
-    on conflict (uri) do update set name = excluded.name, artists = excluded.artists, fetched_at = now()`;
+    insert into track_cache (uri, name, artists, image_url, fetched_at)
+    select u.uri, u.name, array(select jsonb_array_elements_text(u.artists)), u.image_url, now()
+    from jsonb_to_recordset(${sql.json(rows.map((t) => ({ uri: t.uri, name: t.name, artists: t.artists, image_url: t.imageUrl ?? null })))})
+      as u(uri text, name text, artists jsonb, image_url text)
+    on conflict (uri) do update set name = excluded.name, artists = excluded.artists,
+      image_url = excluded.image_url, fetched_at = now()`;
 }
 
 /** Available tracks de-duplicated by uri, in source order (song picker). */

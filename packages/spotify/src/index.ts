@@ -16,6 +16,7 @@ export {
   readPlaylistItems,
   readLikedSongs,
   getSourceTrackCount,
+  pickImage,
   type Me,
   type SourceOption,
   type ReadProgress,

@@ -14,6 +14,8 @@ const rule: MixRuleRow = {
   position: 0,
   trackUri: "spotify:track:drift",
   songName: "Drift",
+  removedPlays: 0,
+  deletedCopies: [],
 };
 
 function renderCard(index: number, onRemove = vi.fn()) {

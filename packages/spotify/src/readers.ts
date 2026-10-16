@@ -3,7 +3,7 @@ import type { SpotifyClient } from "./client.js";
 /** Spotify's maximum page size for playlist items and saved tracks (spec A6). */
 const PAGE = 50;
 const ITEM_FIELDS =
-  "total,next,items(is_local,item(uri,name,type,is_playable,restrictions,artists(name)),track(uri,name,type,is_playable,restrictions,artists(name)))";
+  "total,next,items(is_local,item(uri,name,type,is_playable,restrictions,artists(name),album(images)),track(uri,name,type,is_playable,restrictions,artists(name),album(images)))";
 
 export interface Me {
   id: string;
@@ -26,6 +26,24 @@ export interface TrackItem {
   uri: string;
   name: string;
   artists: string[];
+  /** Album image closest to 300 px wide, else the first, else null. */
+  imageUrl: string | null;
+}
+
+interface RawImage {
+  url?: string | null;
+  width?: number | null;
+}
+
+/** The album image closest to 300 px wide; images without a width only count if nothing else does. */
+export function pickImage(images: RawImage[] | null | undefined): string | null {
+  const withUrl = (images ?? []).filter((i): i is RawImage & { url: string } => !!i?.url);
+  if (withUrl.length === 0) return null;
+  const sized = withUrl.filter((i) => typeof i.width === "number");
+  if (sized.length === 0) return withUrl[0]!.url;
+  let best = sized[0]!;
+  for (const i of sized) if (Math.abs(i.width! - 300) < Math.abs(best.width! - 300)) best = i;
+  return best.url;
 }
 
 interface RawTrack {
@@ -35,6 +53,7 @@ interface RawTrack {
   is_playable?: boolean;
   restrictions?: { reason?: string } | null;
   artists?: { name?: string }[] | null;
+  album?: { images?: RawImage[] | null } | null;
 }
 interface RawEntry {
   is_local?: boolean;
@@ -83,6 +102,7 @@ function toTrackItem(entry: RawEntry | null): TrackItem | null {
     uri: t.uri,
     name: t.name ?? "",
     artists: (t.artists ?? []).map((a) => a.name ?? ""),
+    imageUrl: pickImage(t.album?.images),
   };
 }
 

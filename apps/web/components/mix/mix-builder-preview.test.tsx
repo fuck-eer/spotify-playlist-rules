@@ -31,6 +31,8 @@ const RULES: MixRuleRow[] = [
     position: 0,
     trackUri: T("b"),
     songName: "B",
+    removedPlays: 0,
+    deletedCopies: [],
   },
   {
     id: "b",
@@ -40,6 +42,8 @@ const RULES: MixRuleRow[] = [
     position: 1,
     trackUri: T("gone"),
     songName: "Gone",
+    removedPlays: 0,
+    deletedCopies: [],
   },
 ];
 const PREVIEW: PreviewResponse = {
