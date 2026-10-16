@@ -2,7 +2,7 @@ import {
   build,
   type BuildIssue,
   type BuildStats,
-  type PreviewSlot,
+  type GraphNode,
   type RuleKind,
 } from "@rulemix/rules-engine";
 import type { SpotifyClient } from "@rulemix/spotify";
@@ -11,6 +11,26 @@ import { listMixRules } from "./db/mix-rules-repo";
 import { getMix } from "./db/mixes-repo";
 import { HttpError } from "./http";
 import { readSourceTracks } from "./source-tracks";
+
+/** Temporary v1 dot-line slot (adapter until the cover graph lands in v2-web/04). */
+export interface PreviewSlot {
+  uri: string;
+  ruleIndex: number | null;
+  ruleIndices: number[];
+  shiftedFrom: number | null;
+}
+
+/** Temporary adapter: expands v2 graph nodes into the v1 dot line (one slot per play). */
+export function nodesToSlots(nodes: GraphNode[]): PreviewSlot[] {
+  return nodes.flatMap((n) =>
+    Array.from({ length: n.plays }, () => ({
+      uri: n.uri,
+      ruleIndex: n.ruleIndex,
+      ruleIndices: n.ruleIndices,
+      shiftedFrom: n.shiftedFrom,
+    })),
+  );
+}
 
 export interface PreviewResponse {
   slots: PreviewSlot[];
@@ -47,14 +67,23 @@ export async function computePreview(
   ]);
   const result = build({
     source,
-    rules: mixRules.map((r) => ({ kind: r.kind, n: r.n, uri: r.trackUri })),
+    rules: mixRules.map((r) => ({
+      id: r.id,
+      kind: r.kind,
+      n: r.n,
+      uri: r.trackUri,
+      removedPlays: 0,
+      deletedCopies: [],
+    })),
     keepSourceOrder: mix.keepSourceOrder,
     seed: mix.shuffleSeed,
+    manualOrder: null,
+    bench: [],
   });
   const names: Record<string, string> = {};
   for (const t of source) if (t) names[t.uri] = t.name;
   return {
-    slots: result.preview,
+    slots: nodesToSlots(result.nodes),
     names,
     kinds: mixRules.map((r) => r.kind),
     stats: result.stats,

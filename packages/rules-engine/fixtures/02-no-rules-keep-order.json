@@ -30,7 +30,9 @@
     ],
     "rules": [],
     "keepSourceOrder": true,
-    "seed": 0
+    "seed": 0,
+    "manualOrder": null,
+    "bench": []
   },
   "expected": {
     "uris": [
@@ -40,43 +42,69 @@
       "spotify:track:T04",
       "spotify:track:T05"
     ],
-    "preview": [
+    "nodes": [
       {
+        "key": "b:spotify:track:T01",
+        "role": "original",
         "uri": "spotify:track:T01",
+        "plays": 1,
         "ruleIndex": null,
         "ruleIndices": [],
-        "shiftedFrom": null
+        "shiftedFrom": null,
+        "copyIndex": null,
+        "firstSlot": 0
       },
       {
+        "key": "b:spotify:track:T02",
+        "role": "original",
         "uri": "spotify:track:T02",
+        "plays": 1,
         "ruleIndex": null,
         "ruleIndices": [],
-        "shiftedFrom": null
+        "shiftedFrom": null,
+        "copyIndex": null,
+        "firstSlot": 1
       },
       {
+        "key": "b:spotify:track:T03",
+        "role": "original",
         "uri": "spotify:track:T03",
+        "plays": 1,
         "ruleIndex": null,
         "ruleIndices": [],
-        "shiftedFrom": null
+        "shiftedFrom": null,
+        "copyIndex": null,
+        "firstSlot": 2
       },
       {
+        "key": "b:spotify:track:T04",
+        "role": "original",
         "uri": "spotify:track:T04",
+        "plays": 1,
         "ruleIndex": null,
         "ruleIndices": [],
-        "shiftedFrom": null
+        "shiftedFrom": null,
+        "copyIndex": null,
+        "firstSlot": 3
       },
       {
+        "key": "b:spotify:track:T05",
+        "role": "original",
         "uri": "spotify:track:T05",
+        "plays": 1,
         "ruleIndex": null,
         "ruleIndices": [],
-        "shiftedFrom": null
+        "shiftedFrom": null,
+        "copyIndex": null,
+        "firstSlot": 4
       }
     ],
     "issues": [],
     "stats": {
       "total": 5,
       "rulesApplied": 0,
-      "skippedUnavailable": 0
+      "skippedUnavailable": 0,
+      "benched": 0
     }
   }
 }

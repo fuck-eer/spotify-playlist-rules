@@ -10,29 +10,51 @@
     ],
     "rules": [
       {
+        "id": "m1",
         "kind": "every_n",
         "uri": "spotify:track:T01",
-        "n": 2
+        "n": 2,
+        "removedPlays": 0,
+        "deletedCopies": []
       }
     ],
     "keepSourceOrder": true,
-    "seed": 0
+    "seed": 0,
+    "manualOrder": null,
+    "bench": []
   },
   "expected": {
-    "uris": ["spotify:track:T01"],
-    "preview": [
+    "uris": ["spotify:track:T01", "spotify:track:T01"],
+    "nodes": [
       {
+        "key": "b:spotify:track:T01",
+        "role": "original",
         "uri": "spotify:track:T01",
+        "plays": 1,
+        "ruleIndex": null,
+        "ruleIndices": [],
+        "shiftedFrom": null,
+        "copyIndex": null,
+        "firstSlot": 0
+      },
+      {
+        "key": "r:m1:1",
+        "role": "copy",
+        "uri": "spotify:track:T01",
+        "plays": 1,
         "ruleIndex": 0,
         "ruleIndices": [0],
-        "shiftedFrom": null
+        "shiftedFrom": null,
+        "copyIndex": 1,
+        "firstSlot": 1
       }
     ],
     "issues": [],
     "stats": {
-      "total": 1,
+      "total": 2,
       "rulesApplied": 1,
-      "skippedUnavailable": 0
+      "skippedUnavailable": 0,
+      "benched": 0
     }
   }
 }

@@ -1,0 +1,72 @@
+{
+  "name": "Benched URI missing from the Source is ignored",
+  "input": {
+    "keepSourceOrder": true,
+    "seed": 0,
+    "manualOrder": null,
+    "bench": ["spotify:track:T09"],
+    "source": [
+      {
+        "uri": "spotify:track:T01",
+        "name": "Song 01",
+        "artists": ["Artist"]
+      },
+      {
+        "uri": "spotify:track:T02",
+        "name": "Song 02",
+        "artists": ["Artist"]
+      },
+      {
+        "uri": "spotify:track:T03",
+        "name": "Song 03",
+        "artists": ["Artist"]
+      }
+    ],
+    "rules": []
+  },
+  "expected": {
+    "uris": ["spotify:track:T01", "spotify:track:T02", "spotify:track:T03"],
+    "nodes": [
+      {
+        "key": "b:spotify:track:T01",
+        "role": "original",
+        "uri": "spotify:track:T01",
+        "plays": 1,
+        "ruleIndex": null,
+        "ruleIndices": [],
+        "shiftedFrom": null,
+        "copyIndex": null,
+        "firstSlot": 0
+      },
+      {
+        "key": "b:spotify:track:T02",
+        "role": "original",
+        "uri": "spotify:track:T02",
+        "plays": 1,
+        "ruleIndex": null,
+        "ruleIndices": [],
+        "shiftedFrom": null,
+        "copyIndex": null,
+        "firstSlot": 1
+      },
+      {
+        "key": "b:spotify:track:T03",
+        "role": "original",
+        "uri": "spotify:track:T03",
+        "plays": 1,
+        "ruleIndex": null,
+        "ruleIndices": [],
+        "shiftedFrom": null,
+        "copyIndex": null,
+        "firstSlot": 2
+      }
+    ],
+    "issues": [],
+    "stats": {
+      "total": 3,
+      "rulesApplied": 0,
+      "skippedUnavailable": 0,
+      "benched": 0
+    }
+  }
+}

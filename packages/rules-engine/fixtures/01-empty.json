@@ -4,16 +4,19 @@
     "source": [],
     "rules": [],
     "keepSourceOrder": true,
-    "seed": 0
+    "seed": 0,
+    "manualOrder": null,
+    "bench": []
   },
   "expected": {
     "uris": [],
-    "preview": [],
+    "nodes": [],
     "issues": [],
     "stats": {
       "total": 0,
       "rulesApplied": 0,
-      "skippedUnavailable": 0
+      "skippedUnavailable": 0,
+      "benched": 0
     }
   }
 }

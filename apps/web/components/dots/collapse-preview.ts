@@ -1,4 +1,5 @@
-import type { PreviewSlot, RuleKind } from "@rulemix/rules-engine";
+import type { RuleKind } from "@rulemix/rules-engine";
+import type { PreviewSlot } from "@/lib/preview";
 import { NEUTRAL_DOT, ruleColor } from "@/lib/palette";
 import type { DotItem } from "./dot-line";
 

@@ -31,35 +31,53 @@
     ],
     "rules": [],
     "keepSourceOrder": true,
-    "seed": 0
+    "seed": 0,
+    "manualOrder": null,
+    "bench": []
   },
   "expected": {
     "uris": ["spotify:track:T01", "spotify:track:T02", "spotify:track:T03"],
-    "preview": [
+    "nodes": [
       {
+        "key": "b:spotify:track:T01",
+        "role": "original",
         "uri": "spotify:track:T01",
+        "plays": 1,
         "ruleIndex": null,
         "ruleIndices": [],
-        "shiftedFrom": null
+        "shiftedFrom": null,
+        "copyIndex": null,
+        "firstSlot": 0
       },
       {
+        "key": "b:spotify:track:T02",
+        "role": "original",
         "uri": "spotify:track:T02",
+        "plays": 1,
         "ruleIndex": null,
         "ruleIndices": [],
-        "shiftedFrom": null
+        "shiftedFrom": null,
+        "copyIndex": null,
+        "firstSlot": 1
       },
       {
+        "key": "b:spotify:track:T03",
+        "role": "original",
         "uri": "spotify:track:T03",
+        "plays": 1,
         "ruleIndex": null,
         "ruleIndices": [],
-        "shiftedFrom": null
+        "shiftedFrom": null,
+        "copyIndex": null,
+        "firstSlot": 2
       }
     ],
     "issues": [],
     "stats": {
       "total": 3,
       "rulesApplied": 0,
-      "skippedUnavailable": 3
+      "skippedUnavailable": 3,
+      "benched": 0
     }
   }
 }

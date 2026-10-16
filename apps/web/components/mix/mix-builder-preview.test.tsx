@@ -50,8 +50,8 @@ const PREVIEW: PreviewResponse = {
   ],
   names: { [T("a")]: "A", [T("b")]: "B", [T("c")]: "C" },
   kinds: ["pin_first", "repeat"],
-  stats: { total: 3, rulesApplied: 1, skippedUnavailable: 2 },
-  issues: [{ kind: "unavailable_rule_song", ruleIndex: 1 }],
+  stats: { total: 3, rulesApplied: 1, skippedUnavailable: 2, benched: 0 },
+  issues: [{ kind: "rule_song_not_in_source", ruleIndex: 1 }],
   summary: "3 tracks · 1 rule applied",
   skippedText: "2 songs skipped (unavailable)",
 };

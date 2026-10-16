@@ -1,0 +1,97 @@
+{
+  "name": "Benched Original is gone; its Start with copy stays",
+  "input": {
+    "keepSourceOrder": true,
+    "seed": 0,
+    "manualOrder": null,
+    "bench": ["spotify:track:T03"],
+    "source": [
+      {
+        "uri": "spotify:track:T01",
+        "name": "Song 01",
+        "artists": ["Artist"]
+      },
+      {
+        "uri": "spotify:track:T02",
+        "name": "Song 02",
+        "artists": ["Artist"]
+      },
+      {
+        "uri": "spotify:track:T03",
+        "name": "Song 03",
+        "artists": ["Artist"]
+      },
+      {
+        "uri": "spotify:track:T04",
+        "name": "Song 04",
+        "artists": ["Artist"]
+      }
+    ],
+    "rules": [
+      {
+        "id": "m1",
+        "kind": "pin_first",
+        "uri": "spotify:track:T03",
+        "n": null,
+        "removedPlays": 0,
+        "deletedCopies": []
+      }
+    ]
+  },
+  "expected": {
+    "uris": ["spotify:track:T03", "spotify:track:T01", "spotify:track:T02", "spotify:track:T04"],
+    "nodes": [
+      {
+        "key": "r:m1:0",
+        "role": "copy",
+        "uri": "spotify:track:T03",
+        "plays": 1,
+        "ruleIndex": 0,
+        "ruleIndices": [0],
+        "shiftedFrom": null,
+        "copyIndex": 0,
+        "firstSlot": 0
+      },
+      {
+        "key": "b:spotify:track:T01",
+        "role": "original",
+        "uri": "spotify:track:T01",
+        "plays": 1,
+        "ruleIndex": null,
+        "ruleIndices": [],
+        "shiftedFrom": null,
+        "copyIndex": null,
+        "firstSlot": 1
+      },
+      {
+        "key": "b:spotify:track:T02",
+        "role": "original",
+        "uri": "spotify:track:T02",
+        "plays": 1,
+        "ruleIndex": null,
+        "ruleIndices": [],
+        "shiftedFrom": null,
+        "copyIndex": null,
+        "firstSlot": 2
+      },
+      {
+        "key": "b:spotify:track:T04",
+        "role": "original",
+        "uri": "spotify:track:T04",
+        "plays": 1,
+        "ruleIndex": null,
+        "ruleIndices": [],
+        "shiftedFrom": null,
+        "copyIndex": null,
+        "firstSlot": 3
+      }
+    ],
+    "issues": [],
+    "stats": {
+      "total": 4,
+      "rulesApplied": 1,
+      "skippedUnavailable": 0,
+      "benched": 1
+    }
+  }
+}

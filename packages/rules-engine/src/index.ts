@@ -3,7 +3,7 @@ export type {
   MixRuleInput,
   SourceItem,
   BuildInput,
-  PreviewSlot,
+  GraphNode,
   BuildIssue,
   BuildStats,
   BuildResult,

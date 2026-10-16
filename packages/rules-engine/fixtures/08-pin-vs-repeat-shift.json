@@ -25,18 +25,26 @@
     ],
     "rules": [
       {
+        "id": "m1",
         "kind": "pin_first",
         "uri": "spotify:track:T01",
-        "n": null
+        "n": null,
+        "removedPlays": 0,
+        "deletedCopies": []
       },
       {
+        "id": "m2",
         "kind": "repeat",
         "uri": "spotify:track:T01",
-        "n": 2
+        "n": 2,
+        "removedPlays": 0,
+        "deletedCopies": []
       }
     ],
     "keepSourceOrder": true,
-    "seed": 0
+    "seed": 0,
+    "manualOrder": null,
+    "bench": []
   },
   "expected": {
     "uris": [
@@ -47,49 +55,69 @@
       "spotify:track:T03",
       "spotify:track:T04"
     ],
-    "preview": [
+    "nodes": [
       {
+        "key": "r:m1:0",
+        "role": "copy",
         "uri": "spotify:track:T01",
+        "plays": 1,
         "ruleIndex": 0,
         "ruleIndices": [0],
-        "shiftedFrom": null
+        "shiftedFrom": null,
+        "copyIndex": 0,
+        "firstSlot": 0
       },
       {
+        "key": "b:spotify:track:T01",
+        "role": "original",
         "uri": "spotify:track:T01",
+        "plays": 2,
         "ruleIndex": 1,
         "ruleIndices": [1],
-        "shiftedFrom": 0
+        "shiftedFrom": null,
+        "copyIndex": null,
+        "firstSlot": 1
       },
       {
-        "uri": "spotify:track:T01",
-        "ruleIndex": 1,
-        "ruleIndices": [1],
-        "shiftedFrom": 1
-      },
-      {
+        "key": "b:spotify:track:T02",
+        "role": "original",
         "uri": "spotify:track:T02",
+        "plays": 1,
         "ruleIndex": null,
         "ruleIndices": [],
-        "shiftedFrom": null
+        "shiftedFrom": null,
+        "copyIndex": null,
+        "firstSlot": 3
       },
       {
+        "key": "b:spotify:track:T03",
+        "role": "original",
         "uri": "spotify:track:T03",
+        "plays": 1,
         "ruleIndex": null,
         "ruleIndices": [],
-        "shiftedFrom": null
+        "shiftedFrom": null,
+        "copyIndex": null,
+        "firstSlot": 4
       },
       {
+        "key": "b:spotify:track:T04",
+        "role": "original",
         "uri": "spotify:track:T04",
+        "plays": 1,
         "ruleIndex": null,
         "ruleIndices": [],
-        "shiftedFrom": null
+        "shiftedFrom": null,
+        "copyIndex": null,
+        "firstSlot": 5
       }
     ],
     "issues": [],
     "stats": {
       "total": 6,
       "rulesApplied": 2,
-      "skippedUnavailable": 0
+      "skippedUnavailable": 0,
+      "benched": 0
     }
   }
 }

@@ -59,9 +59,18 @@ export async function readAndBuild(
 
   const { uris } = build({
     source,
-    rules: rules.map((r) => ({ kind: r.kind, n: r.n, uri: r.trackUri })),
+    rules: rules.map((r) => ({
+      id: r.id,
+      kind: r.kind,
+      n: r.n,
+      uri: r.trackUri,
+      removedPlays: 0,
+      deletedCopies: [],
+    })),
     keepSourceOrder: mix.keepSourceOrder,
     seed: mix.shuffleSeed,
+    manualOrder: null,
+    bench: [],
   });
   return { mix, uris };
 }

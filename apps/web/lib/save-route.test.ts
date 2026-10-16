@@ -95,7 +95,7 @@ describe.skipIf(!reachable)("save routes", () => {
     );
     expect(((await done.json()) as { run: SaveRunRow }).run).toMatchObject({
       status: "succeeded",
-      tracksWritten: 3,
+      tracksWritten: 2, // v2: duplicate Source songs collapse to one Original
     });
   });
 

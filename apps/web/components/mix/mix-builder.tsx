@@ -465,7 +465,7 @@ export function MixBuilder({
   const saving = startingSave || runId !== null;
   const unavailable = new Set(
     (preview.data?.issues ?? [])
-      .filter((i) => i.kind === "unavailable_rule_song")
+      .filter((i) => i.kind === "rule_song_not_in_source")
       .map((i) => i.ruleIndex),
   );
 

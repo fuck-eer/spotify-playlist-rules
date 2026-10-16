@@ -2,9 +2,15 @@ export type RuleKind = "pin_first" | "every_n" | "repeat";
 
 /** A Rule bound to a song inside a Mix. `n` is null for pin_first and MIN_N..MAX_N otherwise. */
 export interface MixRuleInput {
+  /** The Mix rule id (keys Rule copies, ADR-0030). */
+  id: string;
   kind: RuleKind;
   uri: string;
   n: number | null;
+  /** Repeat only: plays deleted from the stack (0 <= removedPlays < n). 0 for other kinds. */
+  removedPlays: number;
+  /** Deleted Rule copies by copy index (0 = Start with, 1.. = every-N copy k). */
+  deletedCopies: number[];
 }
 
 /** A Source playlist item; null is an Unavailable track. */
@@ -19,29 +25,42 @@ export interface BuildInput {
   keepSourceOrder: boolean;
   /** uint32 Seed. */
   seed: number;
+  /** Manual order of Original URIs (ADR-0028), or null. */
+  manualOrder: string[] | null;
+  /** Benched Original URIs (ADR-0030). */
+  bench: string[];
 }
 
-/** One Preview slot; positions are 0-based. */
-export interface PreviewSlot {
+/** One node of the cover graph. */
+export interface GraphNode {
+  /** "b:<uri>" Original, "r:<mixRuleId>:<k>" Rule copy. */
+  key: string;
+  role: "original" | "copy";
   uri: string;
-  /** Highest-priority rule that claimed this slot (= ruleIndices[0]); null for a Base list song. */
+  /** >= 2 only for a Repeat stack. */
+  plays: number;
+  /** Copy's rule, or the Repeat rule on a stack; null for plain Originals. */
   ruleIndex: number | null;
-  /** Every rule that claimed this slot, in priority order; length > 1 only for merged slots (ADR-0020). */
+  /** Every rule on this node (merged slots, ADR-0020). */
   ruleIndices: number[];
   shiftedFrom: number | null;
+  copyIndex: number | null;
+  /** 0-based play position of the node's first play. */
+  firstSlot: number;
 }
 
-export type BuildIssue = { kind: "unavailable_rule_song"; ruleIndex: number };
+export type BuildIssue = { kind: "rule_song_not_in_source"; ruleIndex: number };
 
 export interface BuildStats {
   total: number;
   rulesApplied: number;
   skippedUnavailable: number;
+  benched: number;
 }
 
 export interface BuildResult {
   uris: string[];
-  preview: PreviewSlot[];
+  nodes: GraphNode[];
   issues: BuildIssue[];
   stats: BuildStats;
 }
