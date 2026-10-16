@@ -24,7 +24,10 @@ export interface BuildInput {
 /** One Preview slot; positions are 0-based. */
 export interface PreviewSlot {
   uri: string;
+  /** Highest-priority rule that claimed this slot (= ruleIndices[0]); null for a Base list song. */
   ruleIndex: number | null;
+  /** Every rule that claimed this slot, in priority order; length > 1 only for merged slots (ADR-0020). */
+  ruleIndices: number[];
   shiftedFrom: number | null;
 }
 

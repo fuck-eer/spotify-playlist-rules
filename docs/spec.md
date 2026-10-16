@@ -107,14 +107,14 @@ Spotify only gives me play, pause, skip and shuffle. I can't say "this song alwa
   1. Drop unavailable items and count them (ADR-0011).
   2. Apply a seeded shuffle (Fisher–Yates + seeded PRNG) unless the mode is `source`.
   3. Remove rule songs from the base.
-  4. Compute the final length L = B + the sum of rule counts. Pin = 1, Every N = floor(B/N), Repeat = N.
-  5. Claim slots in priority order. A taken slot shifts to the next free slot, recording `shiftedFrom`.
+  4. Compute the final length L = B + the sum of rule counts. Pin = 1, Every N = max(1, floor(B/N)) (ADR-0019), Repeat = N.
+  5. Claim slots in priority order. A taken slot shifts to the next free slot, recording `shiftedFrom`. Exception: an Every N position already holding a copy of the same song merges into it (ADR-0020); each merge shortens L by one.
   6. Fill the remaining slots with the base, in order.
-- **Every N** uses final-slot positions k·(N+1)−1 (research §4.1, ADR-0007).
+- **Every N** uses final-slot positions k·(N+1)−1 (research §4.1, ADR-0007), clamped to L−1 (ADR-0019).
 - **Repeat N** claims N consecutive slots (ADR-0003). The block's start slot is an assumption; see A1.
 - A rule whose song is unavailable produces a warning issue and places nothing (assumption A2).
 - Output:
-  - `preview`: one entry per slot `{uri, ruleIndex|null, shiftedFrom?}`;
+  - `preview`: one entry per slot `{uri, ruleIndex|null, ruleIndices, shiftedFrom?}`; `ruleIndices` lists every rule on a merged slot, and the Preview draws it as a split dot (equal segments in each rule's colour, ADR-0020);
   - `stats`: `{total, rulesApplied, skippedUnavailable}`;
   - `issues`: warnings.
 - Deterministic: the same inputs and seed always give the same output.
@@ -249,7 +249,8 @@ An empty result clears the target.
   - property-based tests with fast-check over random bases (0–600 items, with duplicates and nulls) and 0–10 rules.
   
   Properties:
-  - length = B + rule counts;
+  - length = B + rule counts − merges;
+  - an Every N rule always places at least one copy, including B = 0;
   - every base song appears exactly once;
   - each rule's song count matches its rule;
   - the pin is at slot 0 unless a higher rule took it;

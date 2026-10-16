@@ -77,61 +77,73 @@
       {
         "uri": "spotify:track:T01",
         "ruleIndex": null,
+        "ruleIndices": [],
         "shiftedFrom": null
       },
       {
         "uri": "spotify:track:T02",
         "ruleIndex": null,
+        "ruleIndices": [],
         "shiftedFrom": null
       },
       {
         "uri": "spotify:track:T07",
         "ruleIndex": 0,
+        "ruleIndices": [0],
         "shiftedFrom": null
       },
       {
         "uri": "spotify:track:T08",
         "ruleIndex": 1,
+        "ruleIndices": [1],
         "shiftedFrom": 2
       },
       {
         "uri": "spotify:track:T03",
         "ruleIndex": null,
+        "ruleIndices": [],
         "shiftedFrom": null
       },
       {
         "uri": "spotify:track:T07",
         "ruleIndex": 0,
+        "ruleIndices": [0],
         "shiftedFrom": null
       },
       {
         "uri": "spotify:track:T08",
         "ruleIndex": 1,
+        "ruleIndices": [1],
         "shiftedFrom": 5
       },
       {
         "uri": "spotify:track:T04",
         "ruleIndex": null,
+        "ruleIndices": [],
         "shiftedFrom": null
       },
       {
         "uri": "spotify:track:T07",
         "ruleIndex": 0,
+        "ruleIndices": [0],
         "shiftedFrom": null
       },
       {
         "uri": "spotify:track:T08",
         "ruleIndex": 1,
+        "ruleIndices": [1],
         "shiftedFrom": 8
       },
       {
         "uri": "spotify:track:T05",
         "ruleIndex": null,
+        "ruleIndices": [],
         "shiftedFrom": null
       },
       {
         "uri": "spotify:track:T06",
         "ruleIndex": null,
+        "ruleIndices": [],
         "shiftedFrom": null
       }
     ],

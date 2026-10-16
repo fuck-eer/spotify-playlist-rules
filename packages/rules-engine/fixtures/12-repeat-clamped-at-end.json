@@ -1,5 +1,5 @@
 {
-  "name": "Repeat start is clamped to L - n",
+  "name": "Repeat start is clamped to L - n; a tiny-B every_n still places one copy (ADR-0019)",
   "input": {
     "source": [
       {
@@ -42,6 +42,7 @@
     "uris": [
       "spotify:track:T01",
       "spotify:track:T02",
+      "spotify:track:T03",
       "spotify:track:T04",
       "spotify:track:T04",
       "spotify:track:T04"
@@ -50,33 +51,44 @@
       {
         "uri": "spotify:track:T01",
         "ruleIndex": null,
+        "ruleIndices": [],
         "shiftedFrom": null
       },
       {
         "uri": "spotify:track:T02",
         "ruleIndex": null,
+        "ruleIndices": [],
+        "shiftedFrom": null
+      },
+      {
+        "uri": "spotify:track:T03",
+        "ruleIndex": 1,
+        "ruleIndices": [1],
+        "shiftedFrom": 5
+      },
+      {
+        "uri": "spotify:track:T04",
+        "ruleIndex": 0,
+        "ruleIndices": [0],
         "shiftedFrom": null
       },
       {
         "uri": "spotify:track:T04",
         "ruleIndex": 0,
+        "ruleIndices": [0],
         "shiftedFrom": null
       },
       {
         "uri": "spotify:track:T04",
         "ruleIndex": 0,
-        "shiftedFrom": null
-      },
-      {
-        "uri": "spotify:track:T04",
-        "ruleIndex": 0,
+        "ruleIndices": [0],
         "shiftedFrom": null
       }
     ],
     "issues": [],
     "stats": {
-      "total": 5,
-      "rulesApplied": 1,
+      "total": 6,
+      "rulesApplied": 2,
       "skippedUnavailable": 0
     }
   }

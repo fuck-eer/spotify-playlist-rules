@@ -20,8 +20,8 @@ const modules = import.meta.glob<Fixture>("../fixtures/*.json", { eager: true, i
 const files = Object.keys(modules).sort();
 
 describe("shared fixtures", () => {
-  it("has all 12 fixtures", () => {
-    expect(files).toHaveLength(12);
+  it("has all 14 fixtures", () => {
+    expect(files).toHaveLength(14);
   });
 
   it.each(files)("%s", (file) => {

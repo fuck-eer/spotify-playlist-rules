@@ -17,7 +17,7 @@ const input = (
   seed: 0,
   ...over,
 });
-const base = (uri: string) => ({ uri, ruleIndex: null, shiftedFrom: null });
+const base = (uri: string) => ({ uri, ruleIndex: null, ruleIndices: [], shiftedFrom: null });
 
 describe("build", () => {
   it("step 1: drops null and non-track items, counts them, keeps duplicates", () => {
@@ -50,7 +50,7 @@ describe("build", () => {
     );
     expect(r.issues).toEqual([{ kind: "unavailable_rule_song", ruleIndex: 0 }]);
     expect(r.preview).toEqual([
-      { uri: t("C"), ruleIndex: 1, shiftedFrom: null },
+      { uri: t("C"), ruleIndex: 1, ruleIndices: [1], shiftedFrom: null },
       base(t("A")),
       base(t("B")),
     ]);
@@ -85,7 +85,8 @@ describe("build", () => {
         { kind: "every_n", uri: t("X"), n: 10 },
       ]),
     );
-    expect(r.uris).toEqual(["A", "B", "C", "C", "C"].map(t));
+    // X gets max(1, floor(2/10)) = 1 copy (ADR-0019), clamped into range and shifted back.
+    expect(r.uris).toEqual(["A", "B", "X", "C", "C", "C"].map(t));
   });
 
   it("step 7: a taken slot shifts the lower rule forward", () => {
@@ -96,9 +97,9 @@ describe("build", () => {
       ]),
     );
     expect(r.preview).toEqual([
-      { uri: t("A"), ruleIndex: 0, shiftedFrom: null },
-      { uri: t("B"), ruleIndex: 1, shiftedFrom: 0 },
-      { uri: t("B"), ruleIndex: 1, shiftedFrom: 1 },
+      { uri: t("A"), ruleIndex: 0, ruleIndices: [0], shiftedFrom: null },
+      { uri: t("B"), ruleIndex: 1, ruleIndices: [1], shiftedFrom: 0 },
+      { uri: t("B"), ruleIndex: 1, ruleIndices: [1], shiftedFrom: 1 },
       base(t("C")),
     ]);
   });
@@ -114,11 +115,51 @@ describe("build", () => {
     expect(r.preview).toEqual([
       base(t("A")),
       base(t("B")),
-      { uri: t("Y"), ruleIndex: 2, shiftedFrom: 4 },
-      { uri: t("Y"), ruleIndex: 1, shiftedFrom: null },
-      { uri: t("Y"), ruleIndex: 1, shiftedFrom: null },
-      { uri: t("Y"), ruleIndex: 2, shiftedFrom: 3 },
+      { uri: t("Y"), ruleIndex: 2, ruleIndices: [2], shiftedFrom: 4 },
+      { uri: t("Y"), ruleIndex: 1, ruleIndices: [1], shiftedFrom: null },
+      { uri: t("Y"), ruleIndex: 1, ruleIndices: [1], shiftedFrom: null },
+      { uri: t("Y"), ruleIndex: 2, ruleIndices: [2], shiftedFrom: 3 },
+      { uri: t("X"), ruleIndex: 0, ruleIndices: [0], shiftedFrom: null },
     ]);
+  });
+
+  it("step 5: every_n places at least one copy when B < n (ADR-0019)", () => {
+    const r = build(input(src("1", "2", "X"), [{ kind: "every_n", uri: t("X"), n: 5 }]));
+    expect(r.uris).toEqual(["1", "2", "X"].map(t));
+  });
+
+  it("step 5: every_n places one copy when B = 0 (ADR-0019)", () => {
+    const r = build(input(src("X"), [{ kind: "every_n", uri: t("X"), n: 2 }]));
+    expect(r.preview).toEqual([{ uri: t("X"), ruleIndex: 0, ruleIndices: [0], shiftedFrom: null }]);
+    expect(r.stats.rulesApplied).toBe(1);
+  });
+
+  it("step 7: every_n landing on a copy of the same song merges instead of shifting (ADR-0020)", () => {
+    // B = 2. Repeat 3 on A starts at min(2, 6 - 3) = 2 → slots 2..4. Every 2 on A wants slot 2.
+    const r = build(
+      input(src("1", "2", "A"), [
+        { kind: "repeat", uri: t("A"), n: 3 },
+        { kind: "every_n", uri: t("A"), n: 2 },
+      ]),
+    );
+    expect(r.preview).toEqual([
+      base(t("1")),
+      base(t("2")),
+      { uri: t("A"), ruleIndex: 0, ruleIndices: [0, 1], shiftedFrom: null },
+      { uri: t("A"), ruleIndex: 0, ruleIndices: [0], shiftedFrom: null },
+      { uri: t("A"), ruleIndex: 0, ruleIndices: [0], shiftedFrom: null },
+    ]);
+    expect(r.stats.total).toBe(5);
+  });
+
+  it("step 7: every_n landing on a different song still shifts", () => {
+    const r = build(
+      input(src("1", "2", "A", "B"), [
+        { kind: "repeat", uri: t("A"), n: 3 },
+        { kind: "every_n", uri: t("B"), n: 2 },
+      ]),
+    );
+    expect(r.preview.find((s) => s.uri === t("B"))?.shiftedFrom).toBe(2);
   });
 
   it("step 8: fills remaining slots with the Base list in order", () => {
@@ -134,7 +175,7 @@ describe("build", () => {
         { kind: "pin_first", uri: t("Q"), n: null },
       ]),
     );
-    expect(r.stats).toEqual({ total: 4, rulesApplied: 1, skippedUnavailable: 1 });
+    expect(r.stats).toEqual({ total: 5, rulesApplied: 2, skippedUnavailable: 1 });
     expect(r.issues).toEqual([{ kind: "unavailable_rule_song", ruleIndex: 2 }]);
   });
 

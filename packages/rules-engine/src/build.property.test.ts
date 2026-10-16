@@ -93,17 +93,55 @@ describe("build properties", () => {
         );
         const b = available.filter((u) => !ruleUris.has(u)).length;
         input.rules.forEach((rule, i) => {
-          const placed = r.preview.filter((s) => s.ruleIndex === i);
+          const placed = r.preview.filter((s) => s.ruleIndices.includes(i));
           const expected = !available.includes(rule.uri)
             ? 0
             : rule.kind === "pin_first"
               ? 1
               : rule.kind === "repeat"
                 ? (rule.n ?? 0)
-                : Math.floor(b / (rule.n ?? 1));
+                : Math.max(1, Math.floor(b / (rule.n ?? 1)));
           expect(placed).toHaveLength(expected);
           expect(placed.every((s) => s.uri === rule.uri)).toBe(true);
         });
+      }),
+      RUNS,
+    );
+  });
+
+  it("every_n places at least one copy even for tiny sources (B in 0..n)", () => {
+    fc.assert(
+      fc.property(fc.integer({ min: 0, max: 12 }), fc.integer({ min: 2, max: 10 }), (b, n) => {
+        const source: SourceItem[] = [
+          ...Array.from({ length: b }, (_, i) => ({
+            uri: `spotify:track:B${i}`,
+            name: "b",
+            artists: [],
+          })),
+          { uri: "spotify:track:X", name: "x", artists: [] },
+        ];
+        const r = build({
+          source,
+          rules: [{ kind: "every_n", uri: "spotify:track:X", n }],
+          keepSourceOrder: true,
+          seed: 0,
+        });
+        expect(r.uris.filter((u) => u === "spotify:track:X")).toHaveLength(
+          Math.max(1, Math.floor(b / n)),
+        );
+        expect(r.uris).toHaveLength(b + Math.max(1, Math.floor(b / n)));
+      }),
+      RUNS,
+    );
+  });
+
+  it("ruleIndex is the first of ruleIndices, and merged slots share one song", () => {
+    fc.assert(
+      fc.property(inputArb(10), (input) => {
+        for (const s of build(input).preview) {
+          expect(s.ruleIndex).toBe(s.ruleIndices[0] ?? null);
+          for (const i of s.ruleIndices) expect(input.rules[i]?.uri).toBe(s.uri);
+        }
       }),
       RUNS,
     );

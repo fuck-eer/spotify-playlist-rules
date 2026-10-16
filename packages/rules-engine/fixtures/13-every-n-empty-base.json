@@ -1,0 +1,38 @@
+{
+  "name": "Every N with B = 0 still places one copy (ADR-0019)",
+  "input": {
+    "source": [
+      {
+        "uri": "spotify:track:T01",
+        "name": "Song 01",
+        "artists": ["Artist"]
+      }
+    ],
+    "rules": [
+      {
+        "kind": "every_n",
+        "uri": "spotify:track:T01",
+        "n": 2
+      }
+    ],
+    "keepSourceOrder": true,
+    "seed": 0
+  },
+  "expected": {
+    "uris": ["spotify:track:T01"],
+    "preview": [
+      {
+        "uri": "spotify:track:T01",
+        "ruleIndex": 0,
+        "ruleIndices": [0],
+        "shiftedFrom": null
+      }
+    ],
+    "issues": [],
+    "stats": {
+      "total": 1,
+      "rulesApplied": 1,
+      "skippedUnavailable": 0
+    }
+  }
+}

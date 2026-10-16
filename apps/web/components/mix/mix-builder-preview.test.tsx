@@ -44,9 +44,9 @@ const RULES: MixRuleRow[] = [
 ];
 const PREVIEW: PreviewResponse = {
   slots: [
-    { uri: T("b"), ruleIndex: 0, shiftedFrom: null },
-    { uri: T("a"), ruleIndex: null, shiftedFrom: 0 },
-    { uri: T("c"), ruleIndex: null, shiftedFrom: null },
+    { uri: T("b"), ruleIndex: 0, ruleIndices: [0], shiftedFrom: null },
+    { uri: T("a"), ruleIndex: null, ruleIndices: [], shiftedFrom: 0 },
+    { uri: T("c"), ruleIndex: null, ruleIndices: [], shiftedFrom: null },
   ],
   names: { [T("a")]: "A", [T("b")]: "B", [T("c")]: "C" },
   kinds: ["pin_first", "repeat"],

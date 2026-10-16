@@ -39,16 +39,19 @@
       {
         "uri": "spotify:track:T01",
         "ruleIndex": null,
+        "ruleIndices": [],
         "shiftedFrom": null
       },
       {
         "uri": "spotify:track:T02",
         "ruleIndex": null,
+        "ruleIndices": [],
         "shiftedFrom": null
       },
       {
         "uri": "spotify:track:T03",
         "ruleIndex": null,
+        "ruleIndices": [],
         "shiftedFrom": null
       }
     ],

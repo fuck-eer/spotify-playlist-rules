@@ -27,10 +27,15 @@ function assertValid(input: BuildInput): void {
   });
 }
 
+function everyNCount(baseLength: number, n: number): number {
+  return Math.max(1, Math.floor(baseLength / n));
+}
+
 function countFor(rule: MixRuleInput, baseLength: number): number {
   if (rule.kind === "pin_first") return 1;
   const n = rule.n ?? 0;
-  return rule.kind === "every_n" ? Math.floor(baseLength / n) : n;
+  // ADR-0019: an every_n rule always places at least one copy, even for a tiny Base list.
+  return rule.kind === "every_n" ? everyNCount(baseLength, n) : n;
 }
 
 function desiredPositions(
@@ -42,7 +47,9 @@ function desiredPositions(
   const n = rule.n ?? 0;
   if (rule.kind === "pin_first") return [0];
   if (rule.kind === "every_n") {
-    return Array.from({ length: Math.floor(baseLength / n) }, (_, i) => (i + 1) * (n + 1) - 1);
+    return Array.from({ length: everyNCount(baseLength, n) }, (_, i) =>
+      Math.min((i + 1) * (n + 1) - 1, total - 1),
+    );
   }
   const start = Math.min(ordered.indexOf(rule.uri), total - n);
   return Array.from({ length: n }, (_, i) => start + i);
@@ -84,25 +91,49 @@ export function build(input: BuildInput): BuildResult {
   const slots: (PreviewSlot | null)[] = Array.from({ length: total }, () => null);
   for (const { rule, ruleIndex } of active) {
     for (const p of desiredPositions(rule, b, total, ordered)) {
-      if (slots[p] === null) {
-        slots[p] = { uri: rule.uri, ruleIndex, shiftedFrom: null };
+      const taken = slots[p] ?? null;
+      if (taken === null) {
+        slots[p] = { uri: rule.uri, ruleIndex, ruleIndices: [ruleIndex], shiftedFrom: null };
+      } else if (
+        rule.kind === "every_n" &&
+        taken.uri === rule.uri &&
+        !taken.ruleIndices.includes(ruleIndex)
+      ) {
+        // ADR-0020: the slot already plays this song, so both rules share it; one slot fewer.
+        taken.ruleIndices.push(ruleIndex);
       } else {
-        slots[findFreeSlot(slots, p)] = { uri: rule.uri, ruleIndex, shiftedFrom: p };
+        slots[findFreeSlot(slots, p)] = {
+          uri: rule.uri,
+          ruleIndex,
+          ruleIndices: [ruleIndex],
+          shiftedFrom: p,
+        };
       }
     }
   }
 
+  // Fill free slots with the Base list in order. Merges leave as many free slots unused as
+  // there were merges; those are the last free ones and are dropped.
   let next = 0;
-  const preview: PreviewSlot[] = slots.map(
-    (slot) => slot ?? { uri: baseList[next++] as string, ruleIndex: null, shiftedFrom: null },
-  );
+  const preview: PreviewSlot[] = [];
+  for (const slot of slots) {
+    if (slot !== null) preview.push(slot);
+    else if (next < b) {
+      preview.push({
+        uri: baseList[next++] as string,
+        ruleIndex: null,
+        ruleIndices: [],
+        shiftedFrom: null,
+      });
+    }
+  }
 
   return {
     uris: preview.map((s) => s.uri),
     preview,
     issues,
     stats: {
-      total,
+      total: preview.length,
       rulesApplied: counts.filter((c) => c > 0).length,
       skippedUnavailable,
     },

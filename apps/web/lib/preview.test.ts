@@ -114,6 +114,6 @@ describe.skipIf(!reachable)("computePreview", () => {
     await addRule("repeat", 2, T("a"));
     const { slots } = await preview();
     expect(slots.some((s) => s.shiftedFrom === 0)).toBe(true);
-    expect(slots[0]).toEqual({ uri: T("b"), ruleIndex: 0, shiftedFrom: null });
+    expect(slots[0]).toEqual({ uri: T("b"), ruleIndex: 0, ruleIndices: [0], shiftedFrom: null });
   });
 });
