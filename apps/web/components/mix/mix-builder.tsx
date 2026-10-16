@@ -40,8 +40,8 @@ import {
 import { Loader2Icon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import type { PlaybackOutcome, RunKind, SaveRunRow } from "@/lib/db/save-runs-repo";
-import type { PreviewResponse } from "@/lib/preview";
-import { PreviewPanel, type PreviewState } from "./preview-panel";
+import { GraphPanel } from "@/components/graph/graph-panel";
+import { useMixState } from "@/lib/use-mix-state";
 import { RuleCard } from "./rule-card";
 import { RulePickerSheet, type RulesState } from "./rule-picker-sheet";
 import { RulesIconLink } from "./rules-icon-link";
@@ -103,9 +103,7 @@ export function MixBuilder({
   const [pendingSource, setPendingSource] = useState<SourceListItem | null>(null);
   const handledAddRule = useRef(false);
   const [keepSourceOrder, setKeepSourceOrder] = useState(mix?.keepSourceOrder ?? false);
-  const [preview, setPreview] = useState<PreviewState>({ status: "idle", data: null });
   const [previewTick, setPreviewTick] = useState(0);
-  const previewReq = useRef(0);
   const refreshPreview = () => setPreviewTick((t) => t + 1);
   const [runId, setRunId] = useState<string | null>(null);
   const [saveRun, setSaveRun] = useState<SaveRunRow | null>(null);
@@ -319,33 +317,7 @@ export function MixBuilder({
     refreshPreview();
   }
 
-  async function loadPreview(id: string): Promise<void> {
-    const reqId = ++previewReq.current;
-    setPreview((p) => ({ ...p, status: "loading" }));
-    try {
-      const res = await fetch(`/api/mixes/${id}/preview`);
-      if (reqId !== previewReq.current) return;
-      if (!res.ok) {
-        setPreview({ status: "error", data: null, error: await errorMessage(res) });
-        return;
-      }
-      const data = (await res.json()) as PreviewResponse;
-      if (reqId === previewReq.current) setPreview({ status: "ready", data });
-    } catch {
-      if (reqId === previewReq.current) setPreview({ status: "error", data: null });
-    }
-  }
-
-  // First load is immediate; later changes are debounced by 300ms.
-  useEffect(() => {
-    if (!mixId) return;
-    if (previewTick === 0) {
-      void loadPreview(mixId);
-      return;
-    }
-    const t = setTimeout(() => void loadPreview(mixId), 300);
-    return () => clearTimeout(t);
-  }, [mixId, previewTick]);
+  const graph = useMixState(mixId, previewTick);
 
   async function onKeepSourceOrder(next: boolean): Promise<void> {
     const prev = keepSourceOrder;
@@ -464,7 +436,7 @@ export function MixBuilder({
 
   const saving = startingSave || runId !== null;
   const unavailable = new Set(
-    (preview.data?.issues ?? [])
+    (graph.result?.issues ?? [])
       .filter((i) => i.kind === "rule_song_not_in_source")
       .map((i) => i.ruleIndex),
   );
@@ -617,7 +589,12 @@ export function MixBuilder({
             <div className="mb-2 mt-5 font-mono text-[11px] font-semibold tracking-[.12em] text-mut">
               PREVIEW
             </div>
-            <PreviewPanel state={preview} onRegenerate={() => void loadPreview(mixId)} />
+            <GraphPanel
+              status={graph.status}
+              error={graph.error}
+              state={graph.state}
+              result={graph.result}
+            />
           </>
         ) : null}
         <div className="mb-2 mt-5 font-mono text-[11px] font-semibold tracking-[.12em] text-mut">
