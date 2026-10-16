@@ -21,3 +21,10 @@ export {
   type ReadProgress,
   type TrackItem,
 } from "./readers.js";
+export {
+  WRITE_CHUNK,
+  targetName,
+  writeTarget,
+  type WriteTargetInput,
+  type WriteTargetResult,
+} from "./writer.js";
