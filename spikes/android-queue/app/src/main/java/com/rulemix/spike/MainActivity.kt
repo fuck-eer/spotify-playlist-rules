@@ -42,6 +42,7 @@ class MainActivity : AppCompatActivity() {
     private var remote: SpotifyAppRemote? = null
     private var sub: Subscription<PlayerState>? = null
     private var lastUri: String? = null
+    private var lastPos = 0L
     private val sequence = mutableListOf<String>()
     private val h = Handler(Looper.getMainLooper())
     private val fmt = SimpleDateFormat("HH:mm:ss.SSS", Locale.US)
@@ -150,8 +151,12 @@ class MainActivity : AppCompatActivity() {
     private fun onState(s: PlayerState) {
         val uri = s.track?.uri
         val label = NAMES[uri] ?: s.track?.name ?: "null"
-        if (uri != lastUri) {
+        // A back-to-back repeat (B,B) keeps the same URI, so also count a position reset as a new start.
+        val restarted = uri == lastUri && s.playbackPosition < 2500 && lastPos > 5000
+        lastPos = s.playbackPosition
+        if (uri != lastUri || restarted) {
             lastUri = uri
+            if (restarted) log("   (same URI restarted from 0 → counted as a new play)")
             sequence += label.take(1).takeIf { NAMES.containsKey(uri) } ?: label
             log("TRACK → $label ($uri) paused=${s.isPaused} shuffle=${s.playbackOptions?.isShuffling} pos=${s.playbackPosition}ms")
             log("   SEQUENCE so far: ${sequence.joinToString(",")}")
@@ -163,7 +168,7 @@ class MainActivity : AppCompatActivity() {
 
     /** Test 1: shuffle off, play(A), then queue B,B,C,A. Expect sequence A,B,B,C,A when skipping. */
     private fun test1QueueRepeats() {
-        log("=== TEST 1: play(A) then queue B,B,C,A ==="); sequence.clear(); lastUri = null
+        log("=== TEST 1: play(A) then queue B,B,C,A ==="); sequence.clear(); lastUri = null; lastPos = 0
         val steps = listOf<Pair<String, (SpotifyAppRemote) -> CallResult<*>>>(
             "setShuffle(false)" to { it.playerApi.setShuffle(false) },
             "setRepeat(OFF)" to { it.playerApi.setRepeat(0) },
@@ -178,7 +183,7 @@ class MainActivity : AppCompatActivity() {
 
     /** Test 2: with stuff queued, play(D) — does play() clear the user queue or keep it? */
     private fun test2Replace() {
-        log("=== TEST 2: queue C,C then play(D): does play() replace/clear the queue? ==="); sequence.clear(); lastUri = null
+        log("=== TEST 2: queue C,C then play(D): does play() replace/clear the queue? ==="); sequence.clear(); lastUri = null; lastPos = 0
         val steps = listOf<Pair<String, (SpotifyAppRemote) -> CallResult<*>>>(
             "queue(C)" to { it.playerApi.queue(DEMONS) },
             "queue(C) again" to { it.playerApi.queue(DEMONS) },

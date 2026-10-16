@@ -55,3 +55,13 @@ The client ID is read at build time from `SPOTIFY_CLIENT_ID` or `SPOTIFY_ENV_FIL
 ## v0.2: the "Connecting…" hang
 
 v0.1 hung forever on the OnePlus 12. Known cause on Android 14+: when the app targets SDK 34, the OS blocks Spotify from opening its auth screen from the background, so `connect()` never calls back ([#361](https://github.com/spotify/android-sdk/issues/361), [#377](https://github.com/spotify/android-sdk/issues/377), [#348](https://github.com/spotify/android-sdk/issues/348)). v0.2 adds explicit foreground auth first, lowers targetSdk to 33, adds a 20 s timeout and guards against a double connect.
+
+## Results (OnePlus 12, 2026-10-17)
+
+- **LOGIN then CONNECT works** (v0.2: explicit auth, targetSdk 33).
+- **Test 1:** `play(A)` + `queue(B)`, `queue(B)`, `queue(C)`, `queue(A)` played **A, B, B, C, A by ear**: exact sequence with repeats ✅. The v0.2 log showed `A,B,C,A` because it logged only on URI change; v0.3 also counts a position reset on the same URI as a new play.
+- **Test 2:** `queue(C)`, `queue(C)`, then `play(D)`; the next track was C. So **`play()` does NOT clear the queue**, and the SDK has no clear-queue method ❌.
+- **Player state:** pushed via `subscribeToPlayerState` ✅.
+- The app disconnects in `onStop`, as Spotify recommends ([lifecycle docs](https://developer.spotify.com/documentation/android/tutorials/application-lifecycle)). Backgrounding the app drops the connection, so monitoring or skipping logic only runs while the app is visible unless the real app uses a service.
+
+Decision: the Android app is queue-based; see ADR-0025.
