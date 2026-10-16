@@ -4,7 +4,7 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Glossary:** Original song, Rule copy, Preview, Unavailable track. **Design:** interaction-spec §1, §7, §8; `tokens.json`; shots `desktop.png`, `mobile.png`.
 

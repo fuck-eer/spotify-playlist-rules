@@ -99,12 +99,12 @@ describe.skipIf(!reachable)("computePreview", () => {
   it("keeps source order when asked, and is deterministic for one seed", async () => {
     serve(["a", "b", "c", "d", "e", "f"]);
     await updateMix(sql, FAKE_ME, mixId, { keepSourceOrder: true });
-    expect((await preview()).slots.map((s) => s.uri)).toEqual(
+    expect((await preview()).nodes.map((s) => s.uri)).toEqual(
       ["a", "b", "c", "d", "e", "f"].map(T),
     );
     await updateMix(sql, FAKE_ME, mixId, { keepSourceOrder: false });
-    const one = (await preview()).slots;
-    expect((await preview()).slots).toEqual(one);
+    const one = (await preview()).nodes;
+    expect((await preview()).nodes).toEqual(one);
   });
 
   it("v2: a pin adds a copy and the Original stays; a repeat stacks on its Original", async () => {
@@ -112,8 +112,14 @@ describe.skipIf(!reachable)("computePreview", () => {
     await updateMix(sql, FAKE_ME, mixId, { keepSourceOrder: true });
     await addRule("pin_first", null, T("b"));
     await addRule("repeat", 2, T("a"));
-    const { slots } = await preview();
-    expect(slots.map((s) => s.uri)).toEqual(["b", "a", "a", "b", "c"].map(T));
-    expect(slots[0]).toEqual({ uri: T("b"), ruleIndex: 0, ruleIndices: [0], shiftedFrom: null });
+    const { nodes } = await preview();
+    expect(nodes.map((n) => [n.uri, n.plays])).toEqual([
+      [T("b"), 1],
+      [T("a"), 2],
+      [T("b"), 1],
+      [T("c"), 1],
+    ]);
+    expect(nodes[0]?.key.startsWith("r:")).toBe(true);
+    expect(nodes[0]?.ruleIndex).toBe(0);
   });
 });

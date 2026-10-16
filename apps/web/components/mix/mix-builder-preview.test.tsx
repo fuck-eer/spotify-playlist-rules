@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MixRuleRow } from "@/lib/db/mix-rules-repo";
 import type { MixRow } from "@/lib/db/mixes-repo";
-import type { PreviewResponse } from "@/lib/preview";
+import type { MixState } from "@/lib/mix-state";
 import { MixBuilder } from "./mix-builder";
 
 vi.mock("next/navigation", () => ({
@@ -46,19 +46,19 @@ const RULES: MixRuleRow[] = [
     deletedCopies: [],
   },
 ];
-const PREVIEW: PreviewResponse = {
-  slots: [
-    { uri: T("b"), ruleIndex: 0, ruleIndices: [0], shiftedFrom: null },
-    { uri: T("a"), ruleIndex: null, ruleIndices: [], shiftedFrom: 0 },
-    { uri: T("c"), ruleIndex: null, ruleIndices: [], shiftedFrom: null },
-  ],
-  names: { [T("a")]: "A", [T("b")]: "B", [T("c")]: "C" },
-  kinds: ["pin_first", "repeat"],
-  stats: { total: 3, rulesApplied: 1, skippedUnavailable: 2, benched: 0 },
-  issues: [{ kind: "rule_song_not_in_source", ruleIndex: 1 }],
-  summary: "3 tracks · 1 rule applied",
-  skippedText: "2 songs skipped (unavailable)",
-};
+const item = (id: string) => ({ uri: T(id), name: id.toUpperCase(), artists: ["Kavi"] });
+const STATE = (over: Partial<MixState["arrangement"]> = {}): MixState => ({
+  mix: { ...MIX, keepSourceOrder: true },
+  rules: RULES,
+  source: [item("a"), null, item("b"), null, item("c")],
+  tracks: {
+    [T("a")]: { name: "A", artists: ["Kavi"], imageUrl: null },
+    [T("b")]: { name: "B", artists: ["Kavi"], imageUrl: "https://img.test/b.jpg" },
+    [T("c")]: { name: "C", artists: ["Kavi"], imageUrl: null },
+  },
+  arrangement: { manualOrder: null, bench: [], version: 0, ...over },
+});
+let state = STATE();
 
 type Fetch = (url: string, init?: RequestInit) => Promise<Response>;
 let fetchMock: ReturnType<typeof vi.fn<Fetch>>;
@@ -66,9 +66,10 @@ const calls = (method: string, url: string) =>
   fetchMock.mock.calls.filter(([u, i]) => u === url && (i?.method ?? "GET") === method);
 
 beforeEach(() => {
+  state = STATE();
   fetchMock = vi.fn<Fetch>((url, init) => {
     const method = init?.method ?? "GET";
-    if (url === "/api/mixes/m1/preview") return Promise.resolve(Response.json(PREVIEW));
+    if (url === "/api/mixes/m1/state") return Promise.resolve(Response.json(state));
     if (url === "/api/mixes/m1/reshuffle") return Promise.resolve(Response.json({ seed: 9 }));
     if (url === "/api/mixes/m1" && method === "PATCH")
       return Promise.resolve(Response.json({ mix: { ...MIX, keepSourceOrder: true } }));
@@ -82,12 +83,26 @@ afterEach(() => {
 });
 
 describe("MixBuilder preview", () => {
-  it("renders the dots, summary, skipped text and the moved-from badge", async () => {
+  it("renders the cover graph in play order with summary and skipped link", async () => {
     render(<MixBuilder mix={MIX} rules={RULES} maxRules={10} />);
-    expect(await screen.findByText("3 tracks · 1 rule applied")).toBeTruthy();
+    expect(await screen.findByText("4 songs · 2 rules")).toBeTruthy();
     expect(screen.getByText("2 songs skipped (unavailable)")).toBeTruthy();
-    expect(screen.getByText("moved from #1")).toBeTruthy();
     expect(screen.getByText("PREVIEW")).toBeTruthy();
+    const labels = screen
+      .getAllByTestId("cover")
+      .map((c) => c.querySelector("button")!.getAttribute("aria-label"));
+    expect(labels).toEqual([
+      "Slot 1, B by Kavi, rule #1 Start with",
+      "Slot 2, A by Kavi",
+      "Slot 3, B by Kavi",
+      "Slot 4, C by Kavi",
+    ]);
+  });
+
+  it("shows · your order when a Manual order is set", async () => {
+    state = STATE({ manualOrder: [T("c"), T("a"), T("b")] });
+    render(<MixBuilder mix={MIX} rules={RULES} maxRules={10} />);
+    expect(await screen.findByText("4 songs · 2 rules · your order")).toBeTruthy();
   });
 
   it("flags the rule card whose song is unavailable", async () => {
@@ -113,14 +128,12 @@ describe("MixBuilder preview", () => {
     });
   });
 
-  it("Reshuffle and Regenerate refetch the preview", async () => {
+  it("Reshuffle refetches the state", async () => {
     render(<MixBuilder mix={MIX} rules={RULES} maxRules={10} />);
-    await screen.findByText("3 tracks · 1 rule applied");
-    expect(calls("GET", "/api/mixes/m1/preview")).toHaveLength(1);
-    fireEvent.click(screen.getByRole("button", { name: "Regenerate" }));
-    await waitFor(() => expect(calls("GET", "/api/mixes/m1/preview")).toHaveLength(2));
+    await screen.findByText("4 songs · 2 rules");
+    expect(calls("GET", "/api/mixes/m1/state")).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: "Reshuffle" }));
     await waitFor(() => expect(calls("POST", "/api/mixes/m1/reshuffle")).toHaveLength(1));
-    await waitFor(() => expect(calls("GET", "/api/mixes/m1/preview")).toHaveLength(3));
+    await waitFor(() => expect(calls("GET", "/api/mixes/m1/state")).toHaveLength(2));
   });
 });
