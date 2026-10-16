@@ -40,6 +40,17 @@ describe("buildAuthorizeUrl", () => {
 });
 
 describe("exchangeCode", () => {
+  it("mobile: omits code_verifier and uses the given redirect_uri", async () => {
+    fake.on("POST", /^\/api\/token$/, () => ({
+      body: { access_token: "AT", refresh_token: "RT", expires_in: 3600, scope: "" },
+    }));
+    await exchangeCode(cfg, { code: "c", redirectUri: "rulemix://callback" });
+    const form = new URLSearchParams(fake.calls[0]!.rawBody);
+    expect(form.get("redirect_uri")).toBe("rulemix://callback");
+    expect(form.has("code_verifier")).toBe(false);
+    expect(fake.calls[0]!.headers.authorization).toMatch(/^Basic /);
+  });
+
   it("posts the code with Basic auth and maps expires_in to expiresAt", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(1_000_000);

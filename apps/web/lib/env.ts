@@ -8,6 +8,7 @@ const EnvSchema = z.object({
   SPOTIFY_REDIRECT_URI: z.string().url().default("http://127.0.0.1:3000/api/auth/callback"),
   SPOTIFY_ACCOUNTS_BASE_URL: z.string().url().default("https://accounts.spotify.com"),
   SPOTIFY_API_BASE_URL: z.string().url().default("https://api.spotify.com/v1"),
+  MOBILE_REDIRECT_URI: z.string().min(1).default("rulemix://callback"),
   APP_URL: z.string().url().default("http://127.0.0.1:3000"),
   DATABASE_URL: z.string().url().default("postgres://postgres:postgres@127.0.0.1:54322/rulemix"),
   TEST_DATABASE_URL: z

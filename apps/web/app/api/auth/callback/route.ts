@@ -2,7 +2,8 @@ import { createClient, exchangeCode, getMe, type TokenSet } from "@rulemix/spoti
 import { NextResponse, type NextRequest } from "next/server";
 import { appUrl, OAUTH_COOKIE, OAUTH_COOKIE_PATH, secureCookies } from "@/lib/auth/cookies";
 import { createSession, SESSION_COOKIE, SESSION_TTL_DAYS } from "@/lib/auth/session";
-import { encrypt, verifySigned } from "@/lib/crypto";
+import { upsertSpotifyUser } from "@/lib/auth/upsert-user";
+import { verifySigned } from "@/lib/crypto";
 import { getSql } from "@/lib/db/client";
 import { spotifyConfig } from "@/lib/spotify-config";
 
@@ -58,15 +59,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 
   const sql = getSql();
-  await sql`
-    insert into users (id, account_id, display_name, refresh_token_encrypted,
-      access_token, access_token_expires_at, scopes, authorized_at)
-    values (${me.id}, ${me.accountId}, ${me.displayName}, ${encrypt(tokens.refreshToken)},
-      ${tokens.accessToken}, ${new Date(tokens.expiresAt)}, ${tokens.scope}, now())
-    on conflict (id) do update set account_id = excluded.account_id,
-      display_name = excluded.display_name, refresh_token_encrypted = excluded.refresh_token_encrypted,
-      access_token = excluded.access_token, access_token_expires_at = excluded.access_token_expires_at,
-      scopes = excluded.scopes, authorized_at = excluded.authorized_at`;
+  await upsertSpotifyUser(sql, tokens, me);
   const raw = await createSession(sql, me.id);
 
   const res = NextResponse.redirect(appUrl("/mixes"), 302);
