@@ -20,7 +20,7 @@ The SHA1 belongs to the box's `~/.android/debug.keystore`. If that keystore is r
 3. **APIs used**: tick **Android**. Under **Android packages** add package
    `com.rulemix.spike` with SHA1 `9A:99:3A:59:DA:D4:2B:0B:C6:D8:F8:CF:B9:8C:40:9D:33:2A:06:03`. Save.
 4. Install the APK on the OnePlus 12 (allow "install unknown apps" for whatever you use to open it, or `adb install rulemix-spike.apk`).
-5. Open Spotify once (logged in, Premium), then open **rulemix spike**. It connects on start; approve the Spotify consent screen if shown.
+5. Open Spotify once (logged in, Premium), then open **rulemix spike** and tap **LOGIN** (explicit auth via AuthorizationClient). On success it connects App Remote with `showAuthView(false)`. If LOGIN does nothing, try **LOGIN (browser)**. Connect has a 20 s timeout that logs `connect timed out`. It no longer auto-connects in onStart.
 6. Tap **Test 1**, then tap **Next ⏭** four times. The log prints each track change and a `SEQUENCE so far:` line. Expected if repeats work: `A,B,B,C,A`.
 7. Tap **Test 2**, then **Next ⏭** once: if the next track is Demons (C), `play()` does **not** clear the queue.
 8. **Test 3** dumps the current PlayerState. Screenshot or copy the log (it's selectable) and send it back.
@@ -51,3 +51,7 @@ echo "sdk.dir=$ANDROID_HOME" > local.properties
 SPOTIFY_ENV_FILE=../../apps/web/.env.local ./gradlew assembleDebug
 ```
 The client ID is read at build time from `SPOTIFY_CLIENT_ID` or `SPOTIFY_ENV_FILE` and is never committed.
+
+## v0.2: the "Connecting…" hang
+
+v0.1 hung forever on the OnePlus 12. Known cause on Android 14+: when the app targets SDK 34, the OS blocks Spotify from opening its auth screen from the background, so `connect()` never calls back ([#361](https://github.com/spotify/android-sdk/issues/361), [#377](https://github.com/spotify/android-sdk/issues/377), [#348](https://github.com/spotify/android-sdk/issues/348)). v0.2 adds explicit foreground auth first, lowers targetSdk to 33, adds a 20 s timeout and guards against a double connect.

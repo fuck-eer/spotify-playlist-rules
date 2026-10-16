@@ -1,5 +1,6 @@
 package com.rulemix.spike
 
+import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -11,6 +12,9 @@ import com.spotify.android.appremote.api.ConnectionParams
 import com.spotify.android.appremote.api.Connector
 import com.spotify.android.appremote.api.SpotifyAppRemote
 import com.spotify.protocol.client.CallResult
+import com.spotify.sdk.android.auth.AuthorizationClient
+import com.spotify.sdk.android.auth.AuthorizationRequest
+import com.spotify.sdk.android.auth.AuthorizationResponse
 import com.spotify.protocol.client.Subscription
 import com.spotify.protocol.types.PlayerState
 import java.text.SimpleDateFormat
@@ -30,6 +34,11 @@ class MainActivity : AppCompatActivity() {
             DEMONS to "C Demons", RUN_CLOSER to "D Run Closer")
     }
 
+    private val REQ_AUTH = 1337
+    private val SCOPES = arrayOf("app-remote-control", "user-modify-playback-state")
+    private var authed = false
+    private var connecting = false
+    private var connectSeq = 0
     private var remote: SpotifyAppRemote? = null
     private var sub: Subscription<PlayerState>? = null
     private var lastUri: String? = null
@@ -44,6 +53,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         logView = findViewById(R.id.log); status = findViewById(R.id.status); scroll = findViewById(R.id.scroll)
+        findViewById<Button>(R.id.login).setOnClickListener { login(browser = false) }
+        findViewById<Button>(R.id.loginBrowser).setOnClickListener { login(browser = true) }
         findViewById<Button>(R.id.connect).setOnClickListener { connect() }
         findViewById<Button>(R.id.runQueue).setOnClickListener { test1QueueRepeats() }
         findViewById<Button>(R.id.runReplace).setOnClickListener { test2Replace() }
@@ -57,32 +68,80 @@ class MainActivity : AppCompatActivity() {
         }
         findViewById<Button>(R.id.clear).setOnClickListener { logView.text = ""; sequence.clear() }
         log("clientId set: ${BuildConfig.SPOTIFY_CLIENT_ID.isNotBlank()}  redirect=${BuildConfig.REDIRECT_URI}")
-        log("Spotify installed: ${SpotifyAppRemote.isSpotifyInstalled(this)}")
+        log("Spotify installed: ${SpotifyAppRemote.isSpotifyInstalled(this)}  sdkInt=${android.os.Build.VERSION.SDK_INT}")
+        log("lifecycle: onCreate (no auto-connect; tap LOGIN, then it connects)")
+        handleBrowserRedirect(intent)
     }
 
-    override fun onStart() { super.onStart(); connect() }
+    override fun onStart() { super.onStart(); log("lifecycle: onStart") }
+    override fun onResume() { super.onResume(); log("lifecycle: onResume") }
+    override fun onPause() { super.onPause(); log("lifecycle: onPause") }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent); log("lifecycle: onNewIntent data=${intent.data?.scheme}://${intent.data?.host}")
+        handleBrowserRedirect(intent)
+    }
+
+    private fun login(browser: Boolean) {
+        val req = AuthorizationRequest.Builder(BuildConfig.SPOTIFY_CLIENT_ID, AuthorizationResponse.Type.TOKEN, BuildConfig.REDIRECT_URI)
+            .setScopes(SCOPES).setShowDialog(false).build()
+        log("auth: starting ${if (browser) "openLoginInBrowser" else "openLoginActivity"} scopes=${SCOPES.joinToString(" ")}")
+        try {
+            if (browser) AuthorizationClient.openLoginInBrowser(this, req)
+            else AuthorizationClient.openLoginActivity(this, REQ_AUTH, req)
+        } catch (t: Throwable) { log("auth: launch threw ${t.javaClass.simpleName}: ${t.message}") }
+    }
+
+    @Deprecated("spike")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        log("lifecycle: onActivityResult req=$requestCode result=$resultCode hasData=${data != null}")
+        if (requestCode == REQ_AUTH) onAuthResponse(AuthorizationClient.getResponse(resultCode, data))
+    }
+
+    private fun handleBrowserRedirect(i: Intent?) {
+        val uri = i?.data ?: return
+        if (uri.scheme == "rulemix-spike") onAuthResponse(AuthorizationResponse.fromUri(uri))
+    }
+
+    private fun onAuthResponse(r: AuthorizationResponse) {
+        // Never log the token itself.
+        log("auth: response type=${r.type} error=${r.error} state=${r.state} expiresIn=${r.expiresIn} hasToken=${!r.accessToken.isNullOrEmpty()} hasCode=${!r.code.isNullOrEmpty()}")
+        if (r.type == AuthorizationResponse.Type.TOKEN || r.type == AuthorizationResponse.Type.CODE) {
+            authed = true; log("auth: OK → connecting App Remote with showAuthView(false)"); connect()
+        } else log("auth: not successful; App Remote connect not attempted")
+    }
 
     override fun onStop() {
-        super.onStop()
-        sub?.cancel(); sub = null
+        super.onStop(); log("lifecycle: onStop → disconnect")
+        sub?.cancel(); sub = null; connecting = false; connectSeq++
         remote?.let { SpotifyAppRemote.disconnect(it) }; remote = null
         status.text = "Disconnected"
     }
 
     private fun connect() {
         if (remote?.isConnected == true) { log("already connected"); return }
+        if (connecting) { log("connect already in progress, ignoring"); return }
+        connecting = true
+        val seq = ++connectSeq
+        h.postDelayed({
+            if (connecting && seq == connectSeq) { connecting = false; status.text = "Connect timed out"; log("connect timed out (20s, no onConnected/onFailure)") }
+        }, 20_000)
+        log("connect: SpotifyAppRemote.connect(showAuthView=${!authed}) seq=$seq")
         val params = ConnectionParams.Builder(BuildConfig.SPOTIFY_CLIENT_ID)
             .setRedirectUri(BuildConfig.REDIRECT_URI)
-            .showAuthView(true)
+            .showAuthView(!authed)
             .build()
         status.text = "Connecting…"
         SpotifyAppRemote.connect(this, params, object : Connector.ConnectionListener {
             override fun onConnected(r: SpotifyAppRemote) {
+                if (seq == connectSeq) connecting = false
                 remote = r; status.text = "Connected"; log("CONNECTED")
                 sub = r.playerApi.subscribeToPlayerState().setEventCallback { onState(it) } as Subscription<PlayerState>
                 sub?.setErrorCallback { log("subscription error: $it") }
             }
             override fun onFailure(t: Throwable) {
+                if (seq == connectSeq) connecting = false
                 status.text = "Connect failed"; log("CONNECT FAILED: ${t.javaClass.simpleName}: ${t.message}")
             }
         })

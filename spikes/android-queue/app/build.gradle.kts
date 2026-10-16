@@ -21,9 +21,9 @@ android {
     defaultConfig {
         applicationId = "com.rulemix.spike"
         minSdk = 26
-        targetSdk = 34
-        versionCode = 1
-        versionName = "0.1-spike"
+        targetSdk = 33 // Android 14 BAL block workaround (spotify/android-sdk#361, #377)
+        versionCode = 2
+        versionName = "0.2-spike"
         buildConfigField("String", "SPOTIFY_CLIENT_ID", "\"${spotifyClientId()}\"")
         buildConfigField("String", "REDIRECT_URI", "\"rulemix-spike://callback\"")
         manifestPlaceholders["redirectSchemeName"] = "rulemix-spike"
