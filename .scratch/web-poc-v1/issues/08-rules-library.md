@@ -1,6 +1,6 @@
 # 08: Rules library and Rule editor (vertical)
 
-**Status:** ready-for-agent
+**Status:** done
 **Type:** task
 **Blocked by:** 02, 03, 06, 07
 **Glossary terms:** Rule, Archive, Mix, Pin first, Insert every N, Repeat N times
@@ -65,6 +65,6 @@ A signed-in user opens Rules (an icon at the top right of `/mixes`) and sees Act
   - Add `e2e/helpers/session.ts`: `seedSession(page)` inserts a test user and session into the test database and sets the cookie. Playwright runs the app with `DATABASE_URL=TEST_DATABASE_URL`.
 
 ## Acceptance criteria
-- [ ] All flows above work; the copy matches exactly
-- [ ] Rules carry no song anywhere (song-less templates)
-- [ ] All tests pass
+- [x] All flows above work; the copy matches exactly
+- [x] Rules carry no song anywhere (song-less templates)
+- [x] All tests pass
