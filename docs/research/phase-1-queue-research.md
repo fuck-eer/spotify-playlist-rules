@@ -107,4 +107,25 @@ Next tests:
 - play to a desktop or web player instead of the phone;
 - check the track availability with `market=from_token`.
 
+**Diagnostics (2026-10-16, about 23:08 IST):**
+- **(a) Playability:**
+  - `GET /tracks?ids=` returned **403 Forbidden**, which fits the Feb 2026 removal of batch endpoints for our dev-mode app.
+  - `GET /tracks/{id}?market=from_token` returned `is_playable: true` and no restrictions for Hypocrite, Kissing Mouths, Demons and Run Closer. All 26 QA playlist items are `is_playable: true`.
+  - **So availability isn't the cause.**
+- **(b) `context_uri` play:** `PUT /me/player/play` with `context_uri` = the QA playlist on OnePlus 12 returned **204, and after 3 s Demons was playing.** **So Web API playback control of the phone works.**
+- **(c) Other device:** no desktop or web player was listed (only the phone and two Alexa speakers), so this was skipped.
+- **(d) `uris` list on the phone right after (b):** with [Hypocrite, Kissing Mouths, Kissing Mouths, Demons, Run Closer], all playable, `play` returned **204, but playback stopped:** current was null and the queue empty.
+  - Queuing Demons twice returned 200 + 200, but the queue stayed empty.
+  - Pause returned 403. Shuffle was restored to `false`.
+
+**Conclusion so far:**
+- On this account, app and phone, **`context_uri` playback works but `uris`-list playback consistently fails** (4 lists, with and without duplicates, all 204 and silent).
+- The likely cause is a restriction on `uris` playback for our dev-mode app, or a regression on Android Connect; **neither is confirmed.**
+- This blocks the "play an exact list" plan on the phone.
+
+**What does work, and is a viable phase-1 path:** write the rule-ordered list (with duplicates, which already works) into **one reusable hidden playlist** per user, then start it with `context_uri` plus shuffle off. Open items:
+- test `uris` on a desktop or web player;
+- test `POST /me/player/queue` while a context is actually playing;
+- ask on the Spotify developer forum.
+
 **Design impact:** treat Web API playback control of the phone as **unproven**. Always confirm with `currently-playing` after `play`. On Android, prefer the App Remote SDK, which talks to the local app directly.
