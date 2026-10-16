@@ -33,7 +33,7 @@
 
   Map between camelCase and snake_case only in the data layer (`apps/web/lib/db`).
 
-- **Domain terms:** use exactly the terms in `GLOSSARY.md`: Rule, Mix, Rule Set, Base list, Source playlist, Target playlist, Preview, Seed, Archive, Save to Spotify, Regenerate. In code, a Rule bound to a song inside a Mix is a `MixRule`.
+- **Domain terms:** use exactly the terms in `GLOSSARY.md`: Rule, Mix, Rule Set, Base list, Source playlist, Target playlist, Preview, Seed, Archive, Save to Spotify, Regenerate, Player playlist, Play, Playback outcome. In code, a Rule bound to a song inside a Mix is a `MixRule`.
 - **Rule kinds:** the strings `"pin_first" | "every_n" | "repeat"`.
 
 ## Error handling
