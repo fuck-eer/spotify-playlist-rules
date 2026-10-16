@@ -79,8 +79,32 @@ Not run. It would need decrypting the stored refresh token outside the app, and 
 - **`POST /me/player/queue` of C twice:** **200 + 200**, but `GET /me/player/queue` still showed it empty (no session), so queued duplicates are **not confirmed** either.
 - **Restore:** shuffle set back to the original `false` (200). Pause returned 403 because nothing was playing. The phone ended up stopped, not playing its Daily Mix.
 
-**How to read this:** a 204 from `play` does **not** mean playback started. Two likely causes:
-- **(a)** The list repeats its first track (A at positions 0 and 4). This matches the forum report that starting at an earlier copy of a repeated URI is rejected [6].
-- **(b)** The phone app wasn't truly ready (it had just become active, and Android may throttle a backgrounded Spotify).
+**Retry (2026-10-16, about 23:05 IST, phone free, Spotify playing "Low Fade", shuffle off):**
 
-**Design impact:** after `play`, always confirm with `currently-playing`, and retry or alert if it's null. Avoid repeating the first URI later in the list (for example, start with a unique track). Before relying on duplicates, run a follow-up test: (1) a list with no duplicates, then (2) [A,B,B,C,D] where the first track isn't repeated.
+| Test | List | `play` | After 3 s |
+|---|---|---|---|
+| T1 | [Hypocrite, Kissing Mouths, Kissing Mouths, Demons, Hypocrite] | 204 | current null, queue empty |
+| T2 | [Hypocrite, Kissing Mouths, Kissing Mouths, Demons, Run Closer] | 204 | current null, queue empty |
+| T3 | [Hypocrite, Kissing Mouths, Demons, Run Closer], no repeats | 204 | current null, queue empty |
+
+- `POST /me/player/queue` of Demons x2: 200 + 200, but the queue still showed empty.
+- Pause returned 403 "Restriction violated". Shuffle was restored to `false`.
+- The phone, which had been playing, was left stopped.
+
+**How to read this:**
+- **Duplicates aren't the cause:** even the list with no repeats fails.
+- **On this setup, `PUT /me/player/play` with `uris` aimed at the Android phone stops playback and starts nothing, while still returning 204.**
+- **Order and duplicates remain unverified.**
+
+Suspects, all unverified:
+- the dev-mode app limits from Feb 2026;
+- the phone's Spotify app running in the background and being restricted by Android;
+- the tracks not being playable in the user's market (`is_playable` wasn't checked with `market=from_token`);
+- Spotify Connect quirks when the app is in the background.
+
+Next tests:
+- play a `context_uri` (the QA playlist) to see whether *any* Web API play works;
+- play to a desktop or web player instead of the phone;
+- check the track availability with `market=from_token`.
+
+**Design impact:** treat Web API playback control of the phone as **unproven**. Always confirm with `currently-playing` after `play`. On Android, prefer the App Remote SDK, which talks to the local app directly.
