@@ -134,7 +134,7 @@ export function build(input: BuildInput): BuildResult {
     issues,
     stats: {
       total: preview.length,
-      rulesApplied: counts.filter((c) => c > 0).length,
+      rulesApplied: active.length,
       skippedUnavailable,
     },
   };
