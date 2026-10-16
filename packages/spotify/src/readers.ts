@@ -3,7 +3,7 @@ import type { SpotifyClient } from "./client.js";
 /** Spotify's maximum page size for playlist items and saved tracks (spec A6). */
 const PAGE = 50;
 const ITEM_FIELDS =
-  "total,next,items(is_local,item(uri,name,type,artists(name)),track(uri,name,type,artists(name)))";
+  "total,next,items(is_local,item(uri,name,type,is_playable,restrictions,artists(name)),track(uri,name,type,is_playable,restrictions,artists(name)))";
 
 export interface Me {
   id: string;
@@ -32,6 +32,8 @@ interface RawTrack {
   uri?: string | null;
   name?: string;
   type?: string;
+  is_playable?: boolean;
+  restrictions?: { reason?: string } | null;
   artists?: { name?: string }[] | null;
 }
 interface RawEntry {
@@ -67,11 +69,16 @@ export async function getMe(c: SpotifyClient): Promise<Me> {
   };
 }
 
-/** ADR-0011: local files, non-tracks, and entries without a uri are Unavailable tracks (null). */
+/**
+ * ADR-0011: local files, non-tracks, entries without a uri, and tracks Spotify
+ * marks unplayable (is_playable false or any restriction, e.g. market — these
+ * come back nameless with duration 0) are Unavailable tracks (null).
+ */
 function toTrackItem(entry: RawEntry | null): TrackItem | null {
   if (!entry || entry.is_local) return null;
   const t = entry.item ?? entry.track;
   if (!t || t.type !== "track" || !t.uri) return null;
+  if (t.is_playable === false || t.restrictions || !t.name) return null;
   return {
     uri: t.uri,
     name: t.name ?? "",

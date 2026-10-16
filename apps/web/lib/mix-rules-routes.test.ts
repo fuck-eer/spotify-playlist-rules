@@ -11,7 +11,7 @@ import { createMix } from "./db/mixes-repo";
 import { createRule, updateRule } from "./db/rules-repo";
 import { canReachTestDb, closeTestDb, resetTestDb } from "./db/test-utils";
 import { resetEnvCache } from "./env";
-import { FAKE_ME } from "./testing/fake-library";
+import { FAKE_ME, installFakeLibrary } from "./testing/fake-library";
 import { req, signInFakeUser, startRouteHarness } from "./testing/route-harness";
 
 const reachable = await canReachTestDb();
@@ -61,6 +61,46 @@ describe.skipIf(!reachable)("mix rules routes", () => {
     expect(res.status).toBe(200);
     const { songs } = (await res.json()) as { songs: { name: string; artists: string[] }[] };
     expect(songs.map((s) => s.name)).toEqual(["Echo", "Drift", "Sunrise"]);
+  });
+
+  it("songs hides an unplayable, nameless source item (real market-restricted shape)", async () => {
+    fake.on("GET", /\/playlists\/pl-own\/items$/, () => ({
+      body: {
+        total: 2,
+        next: null,
+        items: [
+          {
+            is_local: false,
+            item: {
+              uri: "spotify:track:echo",
+              name: "Echo",
+              type: "track",
+              artists: [{ name: "Kavi" }],
+              is_playable: true,
+            },
+          },
+          {
+            is_local: false,
+            item: {
+              artists: [{ name: "" }],
+              duration_ms: 0,
+              name: "",
+              type: "track",
+              restrictions: { reason: "market" },
+              uri: "spotify:track:0xkGTPTijMU84dtHr3KQQi",
+              is_playable: false,
+            },
+          },
+        ],
+      },
+    }));
+    try {
+      const res = await listSongs(req(`/api/mixes/${mixId}/songs`, cookie), ctx({ id: mixId }));
+      const { songs } = (await res.json()) as { songs: { uri: string }[] };
+      expect(songs.map((s) => s.uri)).toEqual(["spotify:track:echo"]);
+    } finally {
+      installFakeLibrary(fake);
+    }
   });
 
   it("adds a rule with a source song and lists it with the song name", async () => {

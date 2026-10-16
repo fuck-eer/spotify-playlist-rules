@@ -84,7 +84,7 @@ describe("readPlaylistItems", () => {
       ["50", "100"],
     ]);
     expect(calls[0]!.query.get("fields")).toBe(
-      "total,next,items(is_local,item(uri,name,type,artists(name)),track(uri,name,type,artists(name)))",
+      "total,next,items(is_local,item(uri,name,type,is_playable,restrictions,artists(name)),track(uri,name,type,is_playable,restrictions,artists(name)))",
     );
     expect(progress).toEqual([
       [50, 120],
@@ -112,6 +112,35 @@ describe("readPlaylistItems", () => {
       null,
       { uri: "spotify:track:t3", name: "Song 3", artists: ["A", "B"] },
       { uri: "spotify:track:t4", name: "Song 4", artists: ["A", "B"] },
+    ]);
+  });
+
+  it("maps a market-restricted track (real shape: nameless, unplayable) to null", async () => {
+    // Captured from a real playlist item that Spotify shows nameless with "-:--".
+    const restricted = {
+      artists: [{ name: "" }],
+      duration_ms: 0,
+      name: "",
+      type: "track",
+      restrictions: { reason: "market" },
+      uri: "spotify:track:0xkGTPTijMU84dtHr3KQQi",
+      is_playable: false,
+    };
+    servePages(/^\/v1\/playlists\/pl4\/items$/, [
+      { is_local: false, item: track(1) },
+      { is_local: false, item: restricted },
+      { is_local: false, item: { ...track(2), is_playable: false } },
+      { is_local: false, item: { ...track(3), restrictions: { reason: "explicit" } } },
+      { is_local: false, item: { ...track(4), name: "" } },
+      { is_local: false, item: { ...track(5), is_playable: true } },
+    ]);
+    expect(await readPlaylistItems(c, "pl4")).toEqual([
+      { uri: "spotify:track:t1", name: "Song 1", artists: ["A", "B"] },
+      null,
+      null,
+      null,
+      null,
+      { uri: "spotify:track:t5", name: "Song 5", artists: ["A", "B"] },
     ]);
   });
 
