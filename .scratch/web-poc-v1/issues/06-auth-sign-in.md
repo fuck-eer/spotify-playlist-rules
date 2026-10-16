@@ -1,6 +1,6 @@
 # 06: Sign in with Spotify (server-side auth vertical)
 
-**Status:** ready-for-agent
+**Status:** done
 **Type:** task
 **Blocked by:** 03, 04
 **Glossary terms:** none beyond user/session
@@ -72,5 +72,14 @@ A user opens the app, taps "Continue with Spotify", authorizes, and lands on Hom
 
 ## Acceptance criteria
 - [ ] The full sign-in works against real Spotify locally with `.env.local` (manual check by Nishchay; the redirect URI `http://127.0.0.1:3000/api/auth/callback` is registered)
-- [ ] No token appears in the browser (cookies hold only an opaque id), in logs, or in responses
-- [ ] All tests pass
+- [x] No token appears in the browser (cookies hold only an opaque id), in logs, or in responses
+- [x] All tests pass
+
+## Implementation notes (t06)
+- `@rulemix/spotify/testing` subpath already existed (from 04); reused.
+- Route handlers read cookies from the `NextRequest` (testable without request context); `/api/me` uses `userFromRequest`. `requireUserApi`/`requireUserPage` (via `cookies()`) are exported for later tickets, plus `optionalUser` for the sign-in page.
+- Sign-in UI lives in `components/sign-in.tsx` (client, unit-tested); `app/page.tsx` is a thin server wrapper. Replaced scaffold `page.test.tsx` and `e2e/home.spec.ts`.
+- Callback: Spotify failures during exchange/getMe redirect to `/?error=denied` (logged by error name only).
+- `apps/web/vitest.config.ts`: `fileParallelism: false` — DB test files share and truncate TEST_DATABASE_URL and raced.
+- `next.config.ts`: webpack `extensionAlias` so Next resolves the spotify package's `.js` specifiers to `.ts` (dev/build failed once the web app imported it at runtime).
+- Real-Spotify manual check still pending (Nishchay).

@@ -1,20 +1,15 @@
-"use client";
+import { redirect } from "next/navigation";
+import { SignIn } from "@/components/sign-in";
+import { optionalUser } from "@/lib/auth/session";
 
-import { motion, useReducedMotion } from "motion/react";
-import { Button } from "@/components/ui/button";
+export const dynamic = "force-dynamic";
 
-export default function Page() {
-  const reduce = useReducedMotion();
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-bg text-tx">
-      <h1 className="font-mono text-3xl font-bold tracking-tight">rulemix</h1>
-      <motion.div
-        initial={reduce ? false : { opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.2 }}
-      >
-        <Button>Sign in with Spotify</Button>
-      </motion.div>
-    </main>
-  );
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string | string[] }>;
+}) {
+  if (await optionalUser()) redirect("/mixes");
+  const { error } = await searchParams;
+  return <SignIn error={error === "denied" || error === "state" ? error : null} />;
 }
