@@ -62,5 +62,7 @@ test("long-press drag onto the Bench target benches the song", async ({ page }) 
   await expect(target).toHaveText("Drop to bench");
   await page.mouse.up();
   await expect(page.getByRole("button", { name: "Bench, 1 song. Tap to open." })).toBeVisible();
-  expect(await coverLabels(page)).toEqual(["Slot 1, Echo by Kavi", "Slot 2, Sunrise by Kavi"]);
+  await expect
+    .poll(() => coverLabels(page))
+    .toEqual(["Slot 1, Echo by Kavi", "Slot 2, Sunrise by Kavi"]);
 });

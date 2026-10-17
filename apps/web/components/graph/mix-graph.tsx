@@ -1,6 +1,7 @@
 "use client";
 
 import type { BuildResult, GraphNode } from "@rulemix/rules-engine";
+import { AnimatePresence } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { applyDraft, draftOf, saveArrangement } from "@/lib/arrangement-client";
@@ -492,11 +493,11 @@ export function MixGraph({
             },
             ...(drag?.lifted && node.key === drag.key
               ? {
+                  dragOffset: { x: drag.x - drag.startX, y: drag.y - drag.startY },
                   style: {
-                    left: (layoutRef.current?.l.pos(i).x ?? 0) + (drag.x - drag.startX),
-                    top: (layoutRef.current?.l.pos(i).y ?? 0) + (drag.y - drag.startY),
+                    left: layoutRef.current?.l.pos(i).x ?? 0,
+                    top: layoutRef.current?.l.pos(i).y ?? 0,
                     zIndex: 30,
-                    transition: "none",
                   },
                 }
               : {}),
@@ -511,9 +512,17 @@ export function MixGraph({
             {COPY.ghost(ghostSlot)} · {COPY.dropHere}
           </div>
         ) : null}
-        {draggedNode ? (
-          <BenchTarget ref={targetRef} kind={removeKind(draggedNode)} hover={!!drag?.overTarget} />
-        ) : (
+        <AnimatePresence>
+          {draggedNode ? (
+            <BenchTarget
+              key="target"
+              ref={targetRef}
+              kind={removeKind(draggedNode)}
+              hover={!!drag?.overTarget}
+            />
+          ) : null}
+        </AnimatePresence>
+        {draggedNode ? null : (
           <BenchCluster
             bench={bench}
             images={images}
@@ -521,38 +530,41 @@ export function MixGraph({
             onToggle={() => setBenchOpen((o) => !o)}
           />
         )}
-        {benchOpen && !draggedNode ? (
-          <BenchPanel
-            rows={bench.map((u) => {
-              const t = state?.tracks[u];
-              return {
-                uri: u,
-                name: t?.name ?? "Unknown song",
-                artist: t?.artists.join(", ") ?? "",
-                imageUrl: t?.imageUrl ?? null,
-              };
-            })}
-            total={total}
-            onClose={() => setBenchOpen(false)}
-            onRestoreEnd={(u) => restore(u, Number.MAX_SAFE_INTEGER)}
-            onRestoreSlot={restoreAtSlot}
-            onRowPointerDown={(u, e) => {
-              if (e.button !== 0) return;
-              setDrag({
-                key: `bench:${u}`,
-                role: "original",
-                pointerId: e.pointerId,
-                startX: e.clientX,
-                startY: e.clientY,
-                x: e.clientX,
-                y: e.clientY,
-                lifted: false,
-                target: -1,
-                bench: u,
-              });
-            }}
-          />
-        ) : null}
+        <AnimatePresence>
+          {benchOpen && !draggedNode ? (
+            <BenchPanel
+              key="panel"
+              rows={bench.map((u) => {
+                const t = state?.tracks[u];
+                return {
+                  uri: u,
+                  name: t?.name ?? "Unknown song",
+                  artist: t?.artists.join(", ") ?? "",
+                  imageUrl: t?.imageUrl ?? null,
+                };
+              })}
+              total={total}
+              onClose={() => setBenchOpen(false)}
+              onRestoreEnd={(u) => restore(u, Number.MAX_SAFE_INTEGER)}
+              onRestoreSlot={restoreAtSlot}
+              onRowPointerDown={(u, e) => {
+                if (e.button !== 0) return;
+                setDrag({
+                  key: `bench:${u}`,
+                  role: "original",
+                  pointerId: e.pointerId,
+                  startX: e.clientX,
+                  startY: e.clientY,
+                  x: e.clientX,
+                  y: e.clientY,
+                  lifted: false,
+                  target: -1,
+                  bench: u,
+                });
+              }}
+            />
+          ) : null}
+        </AnimatePresence>
         {drag?.bench && drag.lifted ? (
           <div
             className="pointer-events-none fixed z-50 h-12 w-12 rounded-md ring-2 ring-white"

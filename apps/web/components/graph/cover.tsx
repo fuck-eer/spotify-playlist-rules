@@ -1,7 +1,9 @@
 "use client";
 
 import type { GraphNode } from "@rulemix/rules-engine";
+import { motion, type MotionStyle } from "motion/react";
 import { useState, type CSSProperties, type PointerEventHandler, type Ref } from "react";
+import { easeIn, POP_CSS, useMotion } from "@/lib/motion";
 import { NEUTRAL_DOT, ruleColor } from "@/lib/palette";
 import { coverLabel, slotLabel, type RuleMeta, type TrackMeta } from "./labels";
 
@@ -41,6 +43,9 @@ export interface CoverProps {
 
 /** One circle cover: ring, `#n` chip, stack `xN`, slot number, `moved from #p`. */
 export function Cover({
+  enterDelay,
+  animateLayout = true,
+  dragOffset,
   node,
   track,
   rules,
@@ -51,17 +56,36 @@ export function Cover({
   buttonRef,
   dropTarget,
   lifted,
-}: CoverProps) {
+}: CoverProps & {
+  enterDelay?: number | undefined;
+  animateLayout?: boolean | undefined;
+  /** Finger offset while dragged (a transform, so it never triggers a layout animation). */
+  dragOffset?: { x: number; y: number } | undefined;
+}) {
+  const m = useMotion();
+  const deleting = node.role === "copy" || node.plays > 1;
   const [loaded, setLoaded] = useState(false);
   const isCopy = node.role === "copy";
   const chipIndex = isCopy || node.plays > 1 ? node.ruleIndex : null;
   const art = track?.imageUrl ?? null;
   return (
-    <div
+    <motion.li
       data-testid="cover"
       data-key={node.key}
-      className="absolute flex w-[72px] -translate-x-1/2 -translate-y-1/2 flex-col items-center"
-      style={style}
+      className="absolute flex w-[72px] -translate-x-1/2 -translate-y-1/2 list-none flex-col items-center"
+      style={{ ...style, x: dragOffset?.x ?? 0, y: dragOffset?.y ?? 0 } as MotionStyle}
+      layout="position"
+      layoutDependency={
+        animateLayout ? `${String(style?.left)},${String(style?.top)}` : "measuring"
+      }
+      initial={m.reduced ? false : { scale: 0.5, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      exit={
+        m.reduced
+          ? { opacity: 0, transition: { duration: 0 } }
+          : { scale: deleting ? 0.6 : 0.2, opacity: 0, transition: easeIn(0.18) }
+      }
+      transition={{ ...m.pop, delay: m.reduced ? 0 : (enterDelay ?? 0), layout: m.snap }}
     >
       <button
         ref={buttonRef}
@@ -72,7 +96,8 @@ export function Cover({
         onKeyDown={onKeyDown}
         className="relative grid size-12 touch-pan-y select-none place-items-center rounded-full outline-offset-4 focus-visible:outline-2 focus-visible:outline-white"
         style={{
-          transform: lifted ? "scale(1.14)" : undefined,
+          transform: lifted ? "scale(1.14)" : "scale(1)",
+          transition: m.reduced ? "none" : `transform 288ms ${POP_CSS}, box-shadow 160ms`,
           boxShadow: lifted ? "0 10px 28px #000c" : undefined,
           outline: dropTarget ? "2px dashed #fff" : undefined,
         }}
@@ -152,6 +177,6 @@ export function Cover({
           moved from #{node.shiftedFrom + 1}
         </span>
       ) : null}
-    </div>
+    </motion.li>
   );
 }

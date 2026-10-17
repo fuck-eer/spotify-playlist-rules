@@ -1,7 +1,9 @@
 "use client";
 
 import type { GraphNode } from "@rulemix/rules-engine";
+import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { popDelay, useMotion, wireDuration } from "@/lib/motion";
 import { Cover } from "./cover";
 import type { RuleMeta, TrackMeta } from "./labels";
 import { layout, type GraphLayout } from "./layout";
@@ -59,6 +61,15 @@ export function CoverGraph({
   onLayout,
 }: CoverGraphProps) {
   const scroller = useRef<HTMLDivElement>(null);
+  const m = useMotion();
+  // Stagger only the first render's covers (#1/#2); later arrivals pop in without delay.
+  const firstKeys = useRef<Set<string> | null>(null);
+  firstKeys.current ??= new Set(nodes.map((n) => n.key));
+  const mounted = useRef(false);
+  useEffect(() => {
+    const t = setTimeout(() => (mounted.current = true), 450);
+    return () => clearTimeout(t);
+  }, []);
   const [width, setWidth] = useState(0);
   const [view, setView] = useState({ top: 0, height: 0 });
 
@@ -80,6 +91,14 @@ export function CoverGraph({
     };
   }, []);
 
+  // FLIP only after the first real measurement, so covers don't slide in from the default width.
+  const [settled, setSettled] = useState(false);
+  const measured = width > 0;
+  useEffect(() => {
+    if (!measured) return;
+    const r = requestAnimationFrame(() => setSettled(true));
+    return () => cancelAnimationFrame(r);
+  }, [measured]);
   const l = layout(nodes.length, width || 360);
   useEffect(() => {
     onLayout?.(l, scroller.current);
@@ -105,31 +124,45 @@ export function CoverGraph({
           width={l.width}
           height={l.height}
         >
-          <path
+          <motion.path
             d={wirePath(l, nodes.length, firstRow, lastRow)}
             stroke="#4a4a4a"
             strokeWidth={2}
             fill="none"
+            initial={m.reduced ? false : { pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={
+              m.reduced
+                ? { duration: 0 }
+                : { duration: wireDuration(nodes.length), ease: [0.4, 0, 0.2, 1] }
+            }
           />
         </svg>
         <ol aria-label="Play order" className="contents">
-          {nodes.map((node, i) => {
-            const p = l.pos(slotOf(i));
-            if (p.row < firstRow || p.row > lastRow) return null;
-            const extra = coverProps?.(node, i) ?? {};
-            return (
-              <li key={node.key} className="contents">
+          <AnimatePresence initial={!m.reduced}>
+            {nodes.map((node, i) => {
+              const p = l.pos(slotOf(i));
+              if (p.row < firstRow || p.row > lastRow) return null;
+              const extra = coverProps?.(node, i) ?? {};
+              return (
                 <Cover
+                  key={node.key}
                   node={node}
                   track={tracks[node.uri]}
                   rules={rules}
-                  style={{ left: p.x, top: p.y, transition: "left 260ms, top 260ms" }}
+                  style={{ left: p.x, top: p.y }}
+                  animateLayout={settled}
+                  enterDelay={
+                    !mounted.current && firstKeys.current?.has(node.key)
+                      ? popDelay(i, nodes.length)
+                      : 0
+                  }
                   onClick={(el) => onTap?.(node, el)}
                   {...extra}
                 />
-              </li>
-            );
-          })}
+              );
+            })}
+          </AnimatePresence>
         </ol>
         {overlay?.(l)}
       </div>

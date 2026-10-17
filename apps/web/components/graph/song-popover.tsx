@@ -2,7 +2,9 @@
 
 import type { RuleKind } from "@rulemix/rules-engine";
 import { MinusIcon, PinIcon, PlusIcon, RepeatIcon, StepForwardIcon, XIcon } from "lucide-react";
+import { motion, type MotionStyle } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useMotion } from "@/lib/motion";
 import { ruleColor } from "@/lib/palette";
 import { placeholder } from "./cover";
 import { ruleName, type TrackMeta } from "./labels";
@@ -93,6 +95,7 @@ export function SongPopover({
   }, [anchor, onClose, wide]);
 
   const rect = anchor?.getBoundingClientRect();
+  const m = useMotion();
   const style: React.CSSProperties = wide
     ? {
         position: "fixed",
@@ -134,14 +137,19 @@ export function SongPopover({
           onClick={onClose}
         />
       ) : null}
-      <div
+      <motion.div
         ref={card}
+        initial={m.reduced ? false : wide ? { scale: 0.3, opacity: 0 } : { y: "100%", opacity: 1 }}
+        animate={{ scale: 1, y: 0, opacity: 1 }}
+        transition={
+          wide ? { ...m.pop, opacity: m.reduced ? { duration: 0 } : { duration: 0.16 } } : m.sheet
+        }
         role="dialog"
         aria-label={track?.name ?? "Song"}
         tabIndex={-1}
         data-testid="song-popover"
         className={`z-50 bg-s2 p-4 shadow-[0_16px_40px_#000b] outline-none ${wide ? "rounded-xl" : "rounded-t-2xl pb-8"}`}
-        style={style}
+        style={{ ...style, originX: 0.5, originY: 0 } as MotionStyle}
       >
         {!wide ? <div aria-hidden className="mx-auto mb-3 h-1 w-9 rounded-full bg-[#555]" /> : null}
         <div className="flex items-center gap-3">
@@ -265,7 +273,7 @@ export function SongPopover({
           </a>
           {footer}
         </div>
-      </div>
+      </motion.div>
     </>
   );
 }
