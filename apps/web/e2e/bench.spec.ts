@@ -14,7 +14,9 @@ test("bench a song, it stays benched after reload and Play skips it; bring it ba
   await page.goto(`/mixes/${mixId}`);
   await page.getByRole("button", { name: "Slot 1, Echo by Kavi" }).click({ timeout: 30_000 });
   await page.getByRole("button", { name: "Move to bench" }).click();
-  await expect(page.getByText("Benched. Tap the bench to bring it back.")).toBeVisible();
+  await expect(
+    page.locator("[data-sonner-toast]").getByText("Benched. Tap the bench to bring it back."),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: "Bench, 1 song. Tap to open." })).toBeVisible();
 
   await page.reload();
@@ -38,7 +40,7 @@ test("bench a song, it stays benched after reload and Play skips it; bring it ba
   await page.getByRole("menuitem", { name: "Put back at slot…" }).click();
   await page.getByTestId("bench-panel").getByLabel("Slot number").fill("3");
   await page.keyboard.press("Enter");
-  await expect(page.getByText("Back in at slot 3")).toBeVisible();
+  await expect(page.locator("[data-sonner-toast]").getByText("Back in at slot 3")).toBeVisible();
   await expect
     .poll(() => coverLabels(page))
     .toEqual(["Slot 1, Drift by Oren", "Slot 2, Sunrise by Kavi", "Slot 3, Echo by Kavi"]);

@@ -170,6 +170,8 @@ describe("song popover", () => {
     render(<MixBuilder mix={MIX} rules={[]} maxRules={10} />);
     const { btn } = await openCover("Slot 4, D by Kavi");
     fireEvent.keyDown(document, { key: "Escape" });
+    // Exit animation (#35): the card stays briefly while it fades/scales out, then unmounts.
+    expect(screen.queryByTestId("song-popover")).not.toBeNull();
     await waitFor(() => expect(screen.queryByTestId("song-popover")).toBeNull());
     expect(document.activeElement).toBe(btn);
   });

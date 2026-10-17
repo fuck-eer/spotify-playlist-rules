@@ -110,6 +110,35 @@ export function CoverGraph({
   );
   const slotOf = (i: number) => (order ? (order[i] ?? i) : i);
 
+  // Previous render's keys and rule colours: new copies fly in (#4), new colours sweep (#7).
+  const prev = useRef<Map<string, number | null> | null>(null);
+  const before = prev.current;
+  const live = mounted.current && before !== null && !m.reduced;
+  const indexOf = new Map(nodes.map((n, i) => [n.key, i]));
+  let newCopies = 0;
+  const motionFor = (node: GraphNode, i: number) => {
+    if (!live || !before) return {};
+    const fresh = !before.has(node.key);
+    const out: { flyFrom?: { dx: number; dy: number; delay: number }; sweep?: boolean } = {};
+    if (fresh && node.role === "copy") {
+      const src = indexOf.get(`b:${node.uri}`);
+      const own = l.pos(slotOf(i));
+      const from = src !== undefined ? l.pos(slotOf(src)) : own;
+      out.flyFrom = {
+        dx: from.x - own.x,
+        dy: from.y - own.y,
+        delay: 0.04 * Math.min(newCopies++, 6),
+      };
+      out.sweep = true;
+    } else if (!fresh && node.ruleIndex !== null && before.get(node.key) !== node.ruleIndex) {
+      out.sweep = true;
+    }
+    return out;
+  };
+  useEffect(() => {
+    prev.current = new Map(nodes.map((n) => [n.key, n.ruleIndex]));
+  });
+
   return (
     <div
       ref={scroller}
@@ -158,6 +187,7 @@ export function CoverGraph({
                       : 0
                   }
                   onClick={(el) => onTap?.(node, el)}
+                  {...motionFor(node, i)}
                   {...extra}
                 />
               );

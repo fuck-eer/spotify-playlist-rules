@@ -59,3 +59,33 @@ body {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* Undo window (motion-spec #27): a 2 px line inside the toast shrinks over 4 s. */
+[data-sonner-toast].rm-undo-toast {
+  overflow: hidden;
+}
+[data-sonner-toast].rm-undo-toast::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: currentColor;
+  opacity: 0.45;
+  transform-origin: left center;
+  animation: rm-undo-timer 4s linear forwards;
+}
+@keyframes rm-undo-timer {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-sonner-toast].rm-undo-toast::after {
+    display: none;
+  }
+}

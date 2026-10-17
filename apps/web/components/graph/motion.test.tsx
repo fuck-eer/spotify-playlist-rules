@@ -84,3 +84,109 @@ describe("reduced motion", () => {
     expect(cluster.style.opacity).not.toBe("0");
   });
 });
+
+describe("v2 motion fixes (F08)", () => {
+  const copy = (uri: number, k: number, ruleIndex = 0): GraphNode => ({
+    ...node(uri),
+    key: `r:x:${k}`,
+    role: "copy",
+    ruleIndex,
+    ruleIndices: [ruleIndex],
+    copyIndex: k,
+  });
+  const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  it("a new rule copy flies in from its source cover and its ring sweeps in (#4, #7)", async () => {
+    mockReduced(false);
+    const base = [0, 1, 2, 3].map(node);
+    const { rerender } = render(<CoverGraph nodes={base} tracks={{}} rules={[]} />);
+    await wait(500);
+    rerender(
+      <CoverGraph
+        nodes={[...base.slice(0, 2), copy(0, 0), ...base.slice(2)]}
+        tracks={{}}
+        rules={[{ kind: "every_n", n: 2 }]}
+      />,
+    );
+    const fly = document.querySelector('[data-key="r:x:0"]')!;
+    expect(fly.getAttribute("data-fly")).toMatch(/^-?\d+,-?\d+$/);
+    expect(fly.getAttribute("data-fly")).not.toBe("0,0");
+    expect(fly.getAttribute("data-sweep")).toBe("1");
+    expect(fly.querySelector('[data-testid="ring-sweep"]')).toBeTruthy();
+    // An Original taking a rule colour sweeps too.
+    rerender(
+      <CoverGraph
+        nodes={[{ ...base[0]!, ruleIndex: 0, ruleIndices: [0] }, ...base.slice(1)]}
+        tracks={{}}
+        rules={[{ kind: "pin_first", n: null }]}
+      />,
+    );
+    expect(document.querySelector(`[data-key="${base[0]!.key}"]`)!.getAttribute("data-sweep")).toBe(
+      "1",
+    );
+  });
+
+  it("reduced motion: no fly-in, no sweep", async () => {
+    mockReduced(true);
+    const base = [0, 1, 2].map(node);
+    const { rerender } = render(<CoverGraph nodes={base} tracks={{}} rules={[]} />);
+    await wait(500);
+    rerender(
+      <CoverGraph nodes={[...base, copy(0, 0)]} tracks={{}} rules={[{ kind: "every_n", n: 2 }]} />,
+    );
+    const c = document.querySelector('[data-key="r:x:0"]')!;
+    expect(c.getAttribute("data-fly")).toBeNull();
+    expect(c.getAttribute("data-sweep")).toBeNull();
+  });
+
+  it("a dropped cover settles from the finger, not from its slot (#10)", async () => {
+    const { Cover } = await import("./cover");
+    mockReduced(false);
+    const props = { node: node(0), track: undefined, rules: [], style: { left: 0, top: 0 } };
+    const { rerender } = render(
+      <ol>
+        <Cover {...props} lifted dragOffset={{ x: 40, y: 12 }} />
+      </ol>,
+    );
+    await wait(500);
+    expect(screen.getByTestId("cover").style.transform).toMatch(/translateX\(40px\)/);
+    rerender(
+      <ol>
+        <Cover {...props} />
+      </ol>,
+    );
+    const li = screen.getByTestId("cover");
+    expect(li.style.transform).toMatch(/translateX\(40px\)/);
+    await wait(700);
+    expect(li.style.transform).not.toMatch(/translateX\(40px\)/);
+  });
+
+  it("reduced motion: the drop lands instantly", async () => {
+    const { Cover } = await import("./cover");
+    mockReduced(true);
+    const props = { node: node(0), track: undefined, rules: [], style: { left: 0, top: 0 } };
+    const { rerender } = render(
+      <ol>
+        <Cover {...props} lifted dragOffset={{ x: 40, y: 12 }} />
+      </ol>,
+    );
+    rerender(
+      <ol>
+        <Cover {...props} />
+      </ol>,
+    );
+    await wait(50);
+    expect(screen.getByTestId("cover").style.transform).not.toMatch(/translateX\(40px\)/);
+  });
+
+  it("Undo toasts carry the timer line; reduced motion hides it (#27)", async () => {
+    const { UNDO_TOAST } = await import("./mix-graph");
+    const fs = await import("node:fs");
+    const css = fs.readFileSync(`${process.cwd()}/app/globals.css`, "utf8");
+    expect(css).toContain(`.${UNDO_TOAST}::after`);
+    expect(css).toMatch(/animation: rm-undo-timer 4s linear/);
+    expect(css).toMatch(
+      /prefers-reduced-motion: reduce\)\s*{\s*\[data-sonner-toast\]\.rm-undo-toast::after\s*{\s*display: none/,
+    );
+  });
+});
