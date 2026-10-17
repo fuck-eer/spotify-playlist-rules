@@ -1,6 +1,5 @@
 package com.rulemix.app.ui
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,6 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import com.rulemix.app.ui.editor.MixEditorRoute
 import com.rulemix.app.ui.mixes.MixListRoute
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,15 +45,6 @@ internal fun SignedInHome(container: AppContainer) {
     if (id == null) {
         MixListRoute(container, onOpen = { open = it })
     } else {
-        BackHandler { open = null }
-        MixOpenPlaceholder(id)
-    }
-}
-
-/** Replaced by the editor in android/06. */
-@Composable
-internal fun MixOpenPlaceholder(id: String) {
-    Box(Modifier.fillMaxSize().background(RmColor.bg), contentAlignment = Alignment.Center) {
-        Text(id, color = RmColor.textMuted)
+        MixEditorRoute(container, id, onBack = { open = null })
     }
 }
