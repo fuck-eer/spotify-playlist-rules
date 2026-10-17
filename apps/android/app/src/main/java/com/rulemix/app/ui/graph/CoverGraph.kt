@@ -14,6 +14,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.key
 import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.SemanticsPropertyKey
@@ -59,9 +60,11 @@ fun CoverGraph(
     cover: @Composable (node: GraphNode, index: Int, content: @Composable () -> Unit) -> Unit = { _, _, c -> c() },
 ) {
     val reduced = reducedMotion()
+    val book = remember { MotionBook() }
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val cols = colsFor(maxWidth.value.toInt())
         onCols(cols)
+        book.update(nodes, cols, reduced)
         val rows = rowCount(nodes.size, cols)
         val width = (cols * COL_WIDTH).dp
         LazyColumn(
@@ -106,15 +109,13 @@ fun CoverGraph(
                     for (i in first..last) {
                         val p = posOf(i, cols)
                         val node = nodes[i]
-                        val pop = remember(node.key) { Animatable(if (reduced) 1f else 0f) }
-                        LaunchedEffect(node.key) { if (!reduced) { delay(minOf(i, 12) * 30L); pop.animateTo(1f, Motion.pop) } }
-                        Box(
-                            Modifier.offset(x = (p.x - COL_WIDTH / 2).dp, y = (ROW_HEIGHT / 2 - COVER_DP / 2).dp)
-                                .semantics { popScale = pop.value }
-                                .graphicsLayer { scaleX = pop.value; scaleY = pop.value; alpha = pop.value.coerceIn(0f, 1f) },
-                        ) {
-                            cover(node, i) { Cover(node, tracks[node.uri], rules) }
+                        AnimatedCover(node, p, reduced, book, initialIndex = i) {
+                            cover(node, i) { Cover(node, tracks[node.uri], rules, sweep = it) }
                         }
+                    }
+                    // Removed covers dissolve in place where they were (#45 delete-shrink, bench shrink).
+                    for (g in book.ghosts.filter { it.pos.row == row }) {
+                        key(g.node.key) { GhostCover(g, reduced, book) { Cover(g.node, tracks[g.node.uri], rules) } }
                     }
                 }
             }

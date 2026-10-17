@@ -43,7 +43,7 @@ fun SourcePickerSheet(
     onDismiss: () -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = RmColor.surface1) {
+    com.rulemix.app.ui.common.RmSheet(onDismiss = onDismiss, containerColor = RmColor.surface1) {
         Column(Modifier.padding(horizontal = 16.dp)) {
             Text(SourcePickerStrings.TITLE, style = RmType.sheetTitle.copy(color = RmColor.text))
             OutlinedTextField(

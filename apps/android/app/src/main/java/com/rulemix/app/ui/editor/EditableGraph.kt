@@ -38,6 +38,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.compose.animation.core.VectorConverter
+import kotlinx.coroutines.launch
 import com.rulemix.app.data.MixState
 import com.rulemix.app.domain.ArrangementOps
 import com.rulemix.app.ui.graph.CoverGraph
@@ -48,6 +50,10 @@ import com.rulemix.app.ui.theme.RmType
 import com.rulemix.engine.BuildResult
 import com.rulemix.engine.GraphNode
 import com.rulemix.engine.NodeRole
+
+/** Test hook: the cover's current finger/settle translation (x, px). */
+val SettleOffset = androidx.compose.ui.semantics.SemanticsPropertyKey<Float>("SettleOffset")
+var androidx.compose.ui.semantics.SemanticsPropertyReceiver.settleOffset by SettleOffset
 
 /** What the editable graph can ask of the editor. */
 interface GraphEditor {
@@ -87,6 +93,19 @@ fun EditableGraph(
     var dragging by remember { mutableStateOf<String?>(null) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     var benchOpen by remember { mutableStateOf(false) }
+    val reduced = com.rulemix.app.ui.motion.reducedMotion()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    /** Drop settle / cancel (#10, #11): the cover springs from the finger to its slot. */
+    val settle = remember { androidx.compose.runtime.mutableStateMapOf<String, androidx.compose.animation.core.Animatable<Offset, androidx.compose.animation.core.AnimationVector2D>>() }
+    fun settleFrom(key: String, from: Offset) {
+        if (reduced || from == Offset.Zero) return
+        val a = androidx.compose.animation.core.Animatable(from, Offset.VectorConverter)
+        settle[key] = a
+        scope.launch {
+            a.animateTo(Offset.Zero, androidx.compose.animation.core.spring(dampingRatio = 0.82f, stiffness = 600f, visibilityThreshold = Offset(0.5f, 0.5f)))
+            if (settle[key] === a) settle.remove(key)
+        }
+    }
     val lineSize = ArrangementOps.lineOf(result.nodes).size
     val view = androidx.compose.ui.platform.LocalView.current
     androidx.compose.runtime.LaunchedEffect(announcement) {
@@ -130,12 +149,14 @@ fun EditableGraph(
                         .graphicsLayer {
                             scaleX = lift
                             scaleY = lift
-                            if (isDragged) {
-                                translationX = offset.x
-                                translationY = offset.y
-                            }
+                            val t = if (isDragged) offset else settle[node.key]?.value ?: Offset.Zero
+                            translationX = t.x
+                            translationY = t.y
                         }
-                        .semantics { customActions = actions }
+                        .semantics {
+                            customActions = actions
+                            settleOffset = (if (isDragged) offset else settle[node.key]?.value ?: Offset.Zero).x
+                        }
                         .then(Modifier.clickableNoRipple { onTap(node) })
                         .then(
                             if (editable && node.role == NodeRole.ORIGINAL) {
@@ -147,7 +168,10 @@ fun EditableGraph(
                                             offset = Offset.Zero
                                         },
                                         onDrag = { ch, d -> ch.consume(); offset += d },
-                                        onDragCancel = { dragging = null },
+                                        onDragCancel = {
+                                            settleFrom(node.key, offset)
+                                            dragging = null
+                                        },
                                         onDragEnd = {
                                             val p = posOf(index, cols)
                                             val dx = with(density) { offset.x.toDp().value }
@@ -157,6 +181,8 @@ fun EditableGraph(
                                                 { i -> posOf(i, cols).let { it.x.toFloat() to it.y.toFloat() } },
                                                 p.x + dx, p.y + dy, node.key,
                                             )
+                                            // The slot reflow (CoverGraph) moves old→new slot; this adds finger→slot.
+                                            settleFrom(node.key, offset)
                                             dragging = null
                                             if (t >= 0) {
                                                 haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -179,7 +205,7 @@ fun EditableGraph(
             ) { Text(EditorStrings.benchCount(bench.size), style = RmType.body.copy(color = RmColor.text)) }
         }
         if (benchOpen && bench.isNotEmpty()) {
-            ModalBottomSheet(onDismissRequest = { benchOpen = false }, containerColor = RmColor.surface1) {
+            com.rulemix.app.ui.common.RmSheet(onDismiss = { benchOpen = false }, containerColor = RmColor.surface1) {
                 BenchSheetContent(state, editable) { editor.restore(it) }
             }
         }
