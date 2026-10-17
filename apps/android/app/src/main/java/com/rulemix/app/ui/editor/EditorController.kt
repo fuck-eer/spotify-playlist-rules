@@ -20,6 +20,8 @@ import com.rulemix.app.domain.safeBuildFromState
 import com.rulemix.engine.BuildResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -91,6 +93,15 @@ class EditorController(
         repo.state(mixId).collect { r -> if (!r.stale && r.data != null) replace(r.data, cache = false) }
     }
 
+    /** Rule changes bump the server's arrangement version (N1); adopt it so our next PUT isn't stale. */
+    private suspend fun refreshVersion() {
+        runCatching {
+            repo.state(mixId).collect { r ->
+                if (!r.stale && r.data != null) state?.let { replace(it.copy(arrangement = it.arrangement.copy(version = r.data.arrangement.version))) }
+            }
+        }
+    }
+
     private fun withRules(f: (List<MixRule>) -> List<MixRule>) {
         val s = state ?: return
         replace(s.copy(rules = f(s.rules)))
@@ -101,6 +112,7 @@ class EditorController(
             try {
                 val r = rulesRepo.add(mixId, kind, n, uri)
                 withRules { it + r }
+                refreshVersion()
             } catch (e: ApiException) {
                 error = e.message
             }
@@ -113,6 +125,7 @@ class EditorController(
             try {
                 val r = rulesRepo.change(mixId, id, kind, n)
                 withRules { rs -> rs.map { if (it.id == id) r.copy(songName = r.songName ?: it.songName) else it } }
+                refreshVersion()
             } catch (e: ApiException) {
                 error = e.message
             }
@@ -125,6 +138,7 @@ class EditorController(
         scope.launch {
             try {
                 rulesRepo.remove(mixId, id)
+                refreshVersion()
             } catch (e: ApiException) {
                 replace(before)
                 error = e.message
@@ -132,26 +146,53 @@ class EditorController(
         }
     }
 
-    /** Optimistic arrangement save; a 409 swaps in the server state. */
+    private val saveLock = Mutex()
+    private var confirmed: MixState? = null
+    private var pendingSaves = 0
+    private var saveEpoch = 0
+
+    /**
+     * Optimistic arrangement save, one at a time per Mix (S1): each PUT carries the version the
+     * previous one returned. A real 409 swaps in the server state; any failure restores the last
+     * confirmed state and drops edits queued behind it.
+     */
     private fun commit(f: (ArrangementDraft) -> ArrangementDraft, message: String? = null) {
         val s = state ?: return
+        if (pendingSaves == 0) confirmed = s
         val d = f(ArrangementOps.draftOf(s))
         replace(ArrangementOps.apply(s, d))
         if (message != null) notice = message
+        pendingSaves++
+        val mine = saveEpoch
         scope.launch {
             try {
-                when (val r = arrangements.put(mixId, s.arrangement.version, d)) {
-                    is ArrangementSave.Saved -> state?.let { replace(it.copy(arrangement = it.arrangement.copy(version = r.version))) }
-                    is ArrangementSave.Stale -> {
-                        replace(r.state)
-                        notice = ArrangementRepository.STALE
+                saveLock.withLock {
+                    val base = confirmed
+                    if (mine != saveEpoch || base == null) return@withLock
+                    try {
+                        when (val r = arrangements.put(mixId, base.arrangement.version, d)) {
+                            is ArrangementSave.Saved -> {
+                                val done = ArrangementOps.apply(base, d)
+                                confirmed = done.copy(arrangement = done.arrangement.copy(version = r.version))
+                                state?.let { replace(it.copy(arrangement = it.arrangement.copy(version = r.version))) }
+                                // The server drops a Repeat rule at 1 play.
+                                if (d.rules.any { e -> base.rules.any { it.id == e.id && it.kind == RuleKind.REPEAT && (it.n ?: 2) - e.removedPlays <= 1 } }) reload()
+                            }
+                            is ArrangementSave.Stale -> {
+                                saveEpoch++
+                                confirmed = r.state
+                                replace(r.state)
+                                notice = ArrangementRepository.STALE
+                            }
+                        }
+                    } catch (e: ApiException) {
+                        saveEpoch++
+                        replace(base)
+                        error = e.message
                     }
                 }
-                // The server drops a Repeat rule at 1 play.
-                if (d.rules.any { e -> s.rules.any { it.id == e.id && it.kind == RuleKind.REPEAT && (it.n ?: 2) - e.removedPlays <= 1 } }) reload()
-            } catch (e: ApiException) {
-                replace(s)
-                error = e.message
+            } finally {
+                pendingSaves--
             }
         }
     }
