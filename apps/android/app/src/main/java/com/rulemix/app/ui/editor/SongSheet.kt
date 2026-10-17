@@ -86,7 +86,7 @@ fun SongSheet(
     onDismiss: () -> Unit,
     footer: @Composable () -> Unit = {},
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = RmColor.surface2) {
+    com.rulemix.app.ui.common.RmSheet(onDismiss = onDismiss, containerColor = RmColor.surface2) {
         SongSheetContent(uri, track, songRules, ruleCount, maxRules, onAdd, onChange, onRemove, footer)
     }
 }

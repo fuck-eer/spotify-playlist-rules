@@ -21,6 +21,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -55,7 +56,14 @@ fun placeholderBrush(uri: String): Brush {
 
 /** One cover: ring (plain / rule / split), stack rings + `x{N}`, `#n` chip, slot label. */
 @Composable
-fun Cover(node: GraphNode, track: TrackMeta?, rules: List<RuleMeta>, modifier: Modifier = Modifier) {
+fun Cover(
+    node: GraphNode,
+    track: TrackMeta?,
+    rules: List<RuleMeta>,
+    modifier: Modifier = Modifier,
+    /** 0..1 while the rule colour sweeps clockwise over the plain ring (#7); null = settled. */
+    sweep: Float? = null,
+) {
     val kind = ringKind(node)
     val chipIndex = if (node.role == NodeRole.COPY || node.plays > 1) node.ruleIndex else null
     val ringColor = node.ruleIndex?.let(::ruleColor) ?: RmColor.ringPlain
@@ -79,7 +87,13 @@ fun Cover(node: GraphNode, track: TrackMeta?, rules: List<RuleMeta>, modifier: M
                     drawArc(ruleColor(node.ruleIndices[0]), -90f, 180f, false, Offset(inset, inset), s, style = Stroke(stroke))
                     drawArc(ruleColor(node.ruleIndices[1]), 90f, 180f, false, Offset(inset, inset), s, style = Stroke(stroke))
                 }
-                else -> Modifier.border(RING_DP.dp, ringColor, CircleShape)
+                else -> if (sweep != null && node.ruleIndex != null) {
+                    Modifier.border(RING_DP.dp, RmColor.ringPlain, CircleShape).drawBehind {
+                        val stroke = RING_DP.dp.toPx()
+                        val inset = stroke / 2
+                        drawArc(ringColor, -90f, 360f * sweep, false, Offset(inset, inset), Size(size.width - stroke, size.height - stroke), style = Stroke(stroke))
+                    }
+                } else Modifier.border(RING_DP.dp, ringColor, CircleShape)
             }
             Box(Modifier.size(COVER_DP.dp).then(ring).testTag("ring-${kind.name.lowercase()}"))
             Box(
@@ -96,12 +110,14 @@ fun Cover(node: GraphNode, track: TrackMeta?, rules: List<RuleMeta>, modifier: M
                 )
             }
             if (chipIndex != null) {
+                val chipScale = if (sweep == null) 1f else ((sweep - 0.4f) / 0.6f).coerceIn(0f, 1f)
                 Text(
                     "#${chipIndex + 1}",
                     style = RmType.slot.copy(color = Color.Black),
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .offset(8.dp, (-6).dp)
+                        .graphicsLayer { scaleX = chipScale; scaleY = chipScale }
                         .background(ruleColor(chipIndex), RoundedCornerShape(999.dp))
                         .padding(horizontal = 4.dp)
                         .testTag("chip"),
