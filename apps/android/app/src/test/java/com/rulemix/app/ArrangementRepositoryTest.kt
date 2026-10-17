@@ -106,6 +106,46 @@ class ArrangementRepositoryTest {
         assertEquals(5, c.state!!.arrangement.version)
         assertEquals(listOf("spotify:track:c", "spotify:track:d"), c.state!!.arrangement.bench)
         assertTrue(c.notice != ArrangementRepository.STALE)
-        assertEquals(EditorStrings.BENCHED, c.announcement)
+        assertEquals(EditorStrings.BENCHED, c.announcement?.trimEnd('\u200b'))
+    }
+
+    private fun pump(scope: TestScope, done: () -> Boolean) {
+        val until = System.currentTimeMillis() + 5000
+        while (!done() && System.currentTimeMillis() < until) {
+            scope.advanceUntilIdle()
+            Thread.sleep(10)
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test fun r1TheAnnouncementWaitsForTheSaveResponse() {
+        val scope = TestScope(StandardTestDispatcher())
+        val c = EditorController("m1", MixRepository(api, MemoryCache(), FakeConnectivity(true)), api, scope)
+        c.replace(sampleState(), cache = false)
+        server.enqueue(MockResponse().setBody("""{"version":4}"""))
+        c.remove(c.result!!.nodes.first { it.uri == "spotify:track:c" })
+        assertEquals(null, c.announcement)
+        pump(scope) { c.state!!.arrangement.version == 4 }
+        assertEquals(EditorStrings.BENCH_HINT, c.announcement?.trimEnd('\u200b'))
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test fun r1AFailedSaveIsAnnouncedAndARepeatedMessageIsAnnouncedAgain() {
+        val scope = TestScope(StandardTestDispatcher())
+        val c = EditorController("m1", MixRepository(api, MemoryCache(), FakeConnectivity(true)), api, scope)
+        c.replace(sampleState(), cache = false)
+        val boom = """{"error":{"code":"internal","message":"Save failed"}}"""
+        server.enqueue(MockResponse().setResponseCode(500).setBody(boom))
+        server.enqueue(MockResponse().setResponseCode(500).setBody(boom))
+        c.remove(c.result!!.nodes.first { it.uri == "spotify:track:c" })
+        assertEquals(null, c.announcement)
+        pump(scope) { c.announcement != null }
+        val first = c.announcement
+        assertTrue(first != null && first.trimEnd('\u200b').isNotEmpty())
+        assertEquals(c.error, first!!.trimEnd('\u200b'))
+        c.remove(c.result!!.nodes.first { it.uri == "spotify:track:c" })
+        pump(scope) { c.announcement != first }
+        assertEquals(first.trimEnd('\u200b'), c.announcement?.trimEnd('\u200b'))
+        assertTrue("same message must change the live-region text", c.announcement != first)
     }
 }

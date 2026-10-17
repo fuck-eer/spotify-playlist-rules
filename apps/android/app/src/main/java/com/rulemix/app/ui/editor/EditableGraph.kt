@@ -84,7 +84,7 @@ fun EditableGraph(
     editable: Boolean,
     onTap: (GraphNode) -> Unit,
     onAskSlot: (GraphNode) -> Unit = {},
-    /** Last arrangement outcome, announced to TalkBack (polite live region + explicit announcement). */
+    /** Last arrangement outcome, announced to TalkBack (polite live region only; no deprecated announceForAccessibility). */
     announcement: String? = null,
 ) {
     val haptics = LocalHapticFeedback.current
@@ -107,10 +107,6 @@ fun EditableGraph(
         }
     }
     val lineSize = ArrangementOps.lineOf(result.nodes).size
-    val view = androidx.compose.ui.platform.LocalView.current
-    androidx.compose.runtime.LaunchedEffect(announcement) {
-        announcement?.let { view.announceForAccessibility(it) }
-    }
     Column {
         Text(
             announcement ?: "",

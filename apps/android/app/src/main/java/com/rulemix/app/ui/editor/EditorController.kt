@@ -39,6 +39,14 @@ class EditorController(
     /** The last arrangement outcome, kept for TalkBack (the snackbar clears [notice]). */
     var announcement by mutableStateOf<String?>(null)
         private set
+    private var announceToggle = false
+
+    /** Announce only confirmed outcomes; a zero-width toggle makes a repeated message re-announce. */
+    private fun announce(message: String?) {
+        if (message.isNullOrEmpty()) return
+        announceToggle = !announceToggle
+        announcement = if (announceToggle) message else message + "\u200b"
+    }
     private var benchedOnce = false
     var maxRules by mutableStateOf(10)
         private set
@@ -164,10 +172,7 @@ class EditorController(
         if (pendingSaves == 0) confirmed = s
         val d = f(ArrangementOps.draftOf(s))
         replace(ArrangementOps.apply(s, d))
-        if (message != null) {
-            notice = message
-            announcement = message
-        }
+        if (message != null) notice = message
         pendingSaves++
         val mine = saveEpoch
         scope.launch {
@@ -181,6 +186,7 @@ class EditorController(
                                 val done = ArrangementOps.apply(base, d)
                                 confirmed = done.copy(arrangement = done.arrangement.copy(version = r.version))
                                 state?.let { replace(it.copy(arrangement = it.arrangement.copy(version = r.version))) }
+                                announce(message)
                                 // The server drops a Repeat rule at 1 play.
                                 if (d.rules.any { e -> base.rules.any { it.id == e.id && it.kind == RuleKind.REPEAT && (it.n ?: 2) - e.removedPlays <= 1 } }) reload()
                             }
@@ -189,13 +195,14 @@ class EditorController(
                                 confirmed = r.state
                                 replace(r.state)
                                 notice = ArrangementRepository.STALE
-                                announcement = ArrangementRepository.STALE
+                                announce(ArrangementRepository.STALE)
                             }
                         }
                     } catch (e: ApiException) {
                         saveEpoch++
                         replace(base)
                         error = e.message
+                        announce(e.message)
                     }
                 }
             } finally {
