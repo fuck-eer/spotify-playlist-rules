@@ -106,5 +106,6 @@ class ArrangementRepositoryTest {
         assertEquals(5, c.state!!.arrangement.version)
         assertEquals(listOf("spotify:track:c", "spotify:track:d"), c.state!!.arrangement.bench)
         assertTrue(c.notice != ArrangementRepository.STALE)
+        assertEquals(EditorStrings.BENCHED, c.announcement)
     }
 }

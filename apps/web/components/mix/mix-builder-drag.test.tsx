@@ -118,6 +118,10 @@ describe("MixBuilder drag & reorder", () => {
       expect(toastMock).toHaveBeenCalledWith("Moved to slot 3. Order saved.", expect.anything()),
     );
     expect(screen.getByText(/your order/)).toBeTruthy();
+    // Screen readers hear the move from a dedicated polite live region.
+    const live = screen.getByTestId("graph-announcer");
+    expect(live.getAttribute("aria-live")).toBe("polite");
+    expect(live.textContent).toContain("Moved to slot 3. Order saved.");
     const opts = toastMock.mock.calls.find((c) => c[0] === "Moved to slot 3. Order saved.")![1] as {
       action: { label: string; onClick: () => void };
     };
@@ -130,6 +134,7 @@ describe("MixBuilder drag & reorder", () => {
     };
     expect(undo).toMatchObject({ version: 4, manualOrder: null });
     await waitFor(() => expect(toastMock).toHaveBeenCalledWith("Move undone", expect.anything()));
+    expect(screen.getByTestId("graph-announcer").textContent).toContain("Move undone");
   });
 
   it("Esc cancels a keyboard pick-up", async () => {

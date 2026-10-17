@@ -33,6 +33,8 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.foundation.layout.size
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -76,6 +78,8 @@ fun EditableGraph(
     editable: Boolean,
     onTap: (GraphNode) -> Unit,
     onAskSlot: (GraphNode) -> Unit = {},
+    /** Last arrangement outcome, announced to TalkBack (polite live region + explicit announcement). */
+    announcement: String? = null,
 ) {
     val haptics = LocalHapticFeedback.current
     val density = LocalDensity.current
@@ -84,7 +88,18 @@ fun EditableGraph(
     var offset by remember { mutableStateOf(Offset.Zero) }
     var benchOpen by remember { mutableStateOf(false) }
     val lineSize = ArrangementOps.lineOf(result.nodes).size
+    val view = androidx.compose.ui.platform.LocalView.current
+    androidx.compose.runtime.LaunchedEffect(announcement) {
+        announcement?.let { view.announceForAccessibility(it) }
+    }
     Column {
+        Text(
+            announcement ?: "",
+            modifier = Modifier.size(1.dp).testTag("graph-announcer").semantics {
+                liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite
+            },
+            color = androidx.compose.ui.graphics.Color.Transparent,
+        )
         if (state.arrangement.manualOrder != null && editable) {
             TextButton(onClick = editor::resetOrder, modifier = Modifier.testTag("reset-order")) { Text(EditorStrings.RESET) }
         }

@@ -36,6 +36,9 @@ class EditorController(
 ) {
     /** One-line feedback (snackbar) for arrangement edits. */
     var notice by mutableStateOf<String?>(null)
+    /** The last arrangement outcome, kept for TalkBack (the snackbar clears [notice]). */
+    var announcement by mutableStateOf<String?>(null)
+        private set
     private var benchedOnce = false
     var maxRules by mutableStateOf(10)
         private set
@@ -161,7 +164,10 @@ class EditorController(
         if (pendingSaves == 0) confirmed = s
         val d = f(ArrangementOps.draftOf(s))
         replace(ArrangementOps.apply(s, d))
-        if (message != null) notice = message
+        if (message != null) {
+            notice = message
+            announcement = message
+        }
         pendingSaves++
         val mine = saveEpoch
         scope.launch {
@@ -183,6 +189,7 @@ class EditorController(
                                 confirmed = r.state
                                 replace(r.state)
                                 notice = ArrangementRepository.STALE
+                                announcement = ArrangementRepository.STALE
                             }
                         }
                     } catch (e: ApiException) {
@@ -235,7 +242,11 @@ class EditorController(
         val nodes = result?.nodes ?: return
         if (node.role != NodeRole.ORIGINAL || target.role != NodeRole.ORIGINAL) return
         val line = ArrangementOps.lineOf(nodes)
-        commit({ it.copy(manualOrder = ArrangementOps.moveOriginal(line, node.uri, target.uri)) })
+        val s = state ?: return
+        val order = ArrangementOps.moveOriginal(line, node.uri, target.uri)
+        val after = safeBuildFromState(ArrangementOps.apply(s, ArrangementOps.draftOf(s).copy(manualOrder = order)))
+        val slot = (after?.nodes?.firstOrNull { it.key == node.key }?.firstSlot ?: 0) + 1
+        commit({ it.copy(manualOrder = order) }, EditorStrings.moved(slot))
     }
 
     /** Move to line slot [slot] (1-based), for TalkBack "Move to slot…". */

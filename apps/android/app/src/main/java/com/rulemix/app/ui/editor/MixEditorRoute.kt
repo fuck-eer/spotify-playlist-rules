@@ -60,7 +60,7 @@ fun MixEditorRoute(container: AppContainer, mixId: String, onBack: () -> Unit) {
         onRemoveRule = c::removeRule,
         onKeepSourceOrder = c::setKeepSourceOrder,
         onReshuffle = c::reshuffle,
-        graph = { st, r -> EditableGraph(st, r, editor, !c.offline, onTap = { if (!c.offline) tapped = it }, onAskSlot = { slotFor = it }) },
+        graph = { st, r -> EditableGraph(st, r, editor, !c.offline, onTap = { if (!c.offline) tapped = it }, onAskSlot = { slotFor = it }, announcement = c.announcement) },
     )
     slotFor?.let { n ->
         val total = c.result?.nodes?.count { it.role == com.rulemix.engine.NodeRole.ORIGINAL } ?: 1

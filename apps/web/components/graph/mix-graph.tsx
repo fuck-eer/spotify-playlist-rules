@@ -134,6 +134,12 @@ export function MixGraph({
     error: null,
   });
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Text for the polite live region (a zero-width space alternates so repeats re-announce). */
+  const [announcement, setAnnouncement] = useState("");
+  const announce = useCallback(
+    (text: string) => setAnnouncement((p) => (p.endsWith("\u200b") ? text : `${text}\u200b`)),
+    [],
+  );
   const suppressClick = useRef(false);
   const layoutRef = useRef<{ l: GraphLayout; scroller: HTMLDivElement | null } | null>(null);
   const stateRef = useRef(state);
@@ -167,6 +173,7 @@ export function MixGraph({
       const r = await queue.commit(next);
       if (r.ok) {
         onSaved?.();
+        if (message) announce(message);
         if (undoable) {
           toast(message, {
             duration: TOAST_MS,
@@ -178,11 +185,16 @@ export function MixGraph({
         } else if (message) toast(message, { duration: TOAST_MS });
         return true;
       }
-      if ("conflict" in r) toast(COPY.conflict);
-      else if ("error" in r) toast.error(r.error);
+      if ("conflict" in r) {
+        toast(COPY.conflict);
+        announce(COPY.conflict);
+      } else if ("error" in r) {
+        toast.error(r.error);
+        announce(r.error);
+      }
       return false;
     },
-    [queue, onSaved],
+    [queue, onSaved, announce],
   );
   const api = useMemo<GraphApi>(() => ({ commit }), [commit]);
 
@@ -565,6 +577,9 @@ export function MixGraph({
           }),
         }}
       >
+        <p aria-live="polite" className="sr-only" data-testid="graph-announcer">
+          {announcement}
+        </p>
         {ghostSlot !== null && liftedKey ? (
           <div
             role="status"
