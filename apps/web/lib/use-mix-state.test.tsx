@@ -38,7 +38,7 @@ describe("build guard (B1)", () => {
   it("useMixState shows an error state for an unbuildable Mix instead of crashing", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => Response.json(state(1))),
+      vi.fn(() => Promise.resolve(Response.json(state(1)))),
     );
     const { result } = renderHook(() => useMixState("m"));
     await waitFor(() => expect(result.current.status).toBe("error"));
