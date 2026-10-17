@@ -36,6 +36,22 @@ android {
         manifestPlaceholders["redirectPathPattern"] = ".*"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+    // Release signing from env only (keystore and passwords never committed; ADR-0033).
+    val ks = System.getenv("RULEMIX_KEYSTORE")?.takeIf { it.isNotBlank() }
+    signingConfigs {
+        if (ks != null) create("release") {
+            storeFile = file(ks)
+            storePassword = System.getenv("RULEMIX_KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("RULEMIX_KEY_ALIAS")
+            keyPassword = System.getenv("RULEMIX_KEY_PASSWORD")
+        }
+    }
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            if (ks != null) signingConfig = signingConfigs.getByName("release")
+        }
+    }
     buildFeatures {
         buildConfig = true
         compose = true
