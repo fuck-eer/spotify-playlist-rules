@@ -310,7 +310,7 @@ export function MixGraph({
         void commit(benchOriginal(cur, node.uri), msg, COPY.backWhere);
       }
     },
-    [commit, onRulesChanged, readdRule],
+    [announce, commit, onRulesChanged, readdRule],
   );
   if (actionsRef) actionsRef.current = { remove };
 
