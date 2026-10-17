@@ -62,6 +62,12 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
+    lint {
+        // Existing warnings (dependency versions, targetSdk 33 by design) are baselined; new ones fail review.
+        baseline = file("lint-baseline.xml")
+        warningsAsErrors = false
+        abortOnError = true
+    }
     testOptions { unitTests.isIncludeAndroidResources = true }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
 }
