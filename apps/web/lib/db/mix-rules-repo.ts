@@ -64,7 +64,9 @@ async function lockMix(tx: Tx, userId: string, mixId: string): Promise<boolean> 
 }
 
 async function touch(tx: Tx, mixId: string): Promise<void> {
-  await tx`update mixes set updated_at = now() where id = ${mixId}`;
+  // Rule changes invalidate arrangements from other devices (N1): a stale PUT then gets 409.
+  await tx`update mixes set updated_at = now(), arrangement_version = arrangement_version + 1
+    where id = ${mixId}`;
 }
 
 export async function listMixRules(

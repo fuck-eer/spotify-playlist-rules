@@ -38,7 +38,7 @@ export async function getMixState(
     available.add(t.uri);
     tracks[t.uri] = { name: t.name, artists: t.artists, imageUrl: t.imageUrl ?? null };
   }
-  await pruneToSource(sql, mixId, available);
+  await pruneToSource(sql, userId, mixId, available);
   const [rules, arrangement] = await Promise.all([
     listMixRules(sql, userId, mixId),
     getArrangement(sql, userId, mixId),

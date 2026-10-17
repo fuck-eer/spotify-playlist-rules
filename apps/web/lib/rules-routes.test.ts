@@ -86,6 +86,29 @@ describe.skipIf(!reachable)("rules routes", () => {
     expect(await missing.json()).toMatchObject({ error: { code: "not_found" } });
   });
 
+  it("editing kind/n resets removed plays and deleted copies in Mixes and bumps their version (B1)", async () => {
+    const r = await createRule(sql, userId, { kind: "repeat", n: 3 });
+    const [m] = await sql<{ id: string }[]>`
+      insert into mixes (user_id, name, source_type, source_name, shuffle_seed)
+      values (${userId}, 'M', 'liked', 'Liked', 1) returning id`;
+    await sql`insert into mix_rules (mix_id, rule_id, position, track_uri, removed_plays, deleted_copies)
+      values (${m!.id}, ${r.id}, 0, 'spotify:track:a', 1, '{2}')`;
+    // A pin/archive-only edit leaves them alone.
+    await patch(req(`/api/rules/${r.id}`, "PATCH", { pinned: true }), ctx(r.id));
+    let [mr] = await sql<{ removed_plays: number }[]>`select removed_plays from mix_rules`;
+    expect(mr!.removed_plays).toBe(1);
+    const res = await patch(
+      req(`/api/rules/${r.id}`, "PATCH", { kind: "every_n", n: 4 }),
+      ctx(r.id),
+    );
+    expect(res.status).toBe(200);
+    [mr] = await sql<{ removed_plays: number; deleted_copies: number[] }[]>`
+      select removed_plays, deleted_copies from mix_rules`;
+    expect(mr).toMatchObject({ removed_plays: 0, deleted_copies: [] });
+    const [v] = await sql<{ arrangement_version: number }[]>`select arrangement_version from mixes`;
+    expect(v!.arrangement_version).toBe(1);
+  });
+
   it("archives via PATCH", async () => {
     const r = await createRule(sql, userId, { kind: "repeat", n: 2 });
     const res = await patch(req(`/api/rules/${r.id}`, "PATCH", { archived: true }), ctx(r.id));

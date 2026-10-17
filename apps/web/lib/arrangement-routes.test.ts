@@ -134,6 +134,52 @@ describe.skipIf(!reachable)("arrangement: state, PUT, reshuffle, reset-order", (
     expect((await put(empty, mixId, null)).status).toBe(401);
   });
 
+  it("PUT rejects removedPlays that don't fit the rule's kind or n (B1)", async () => {
+    const pin = await addRule("pin_first", null, T("drift"));
+    const rep = await addRule("repeat", 3, T("echo"));
+    const body = (id: string, removedPlays: number) => ({
+      version: 0,
+      manualOrder: null,
+      bench: [],
+      rules: [{ id, removedPlays, deletedCopies: [] }],
+    });
+    expect((await put(body(pin, 1))).status).toBe(422);
+    expect((await put(body(rep, 3))).status).toBe(422);
+    expect((await put(body(rep, 1))).status).toBe(200);
+  });
+
+  it("PUT rejects duplicate URIs and a URI both in the order and on the bench (N4)", async () => {
+    const e = { version: 0, rules: [] };
+    expect((await put({ ...e, manualOrder: [T("a"), T("a")], bench: [] })).status).toBe(422);
+    expect((await put({ ...e, manualOrder: null, bench: [T("a"), T("a")] })).status).toBe(422);
+    expect((await put({ ...e, manualOrder: [T("a")], bench: [T("a")] })).status).toBe(422);
+    expect((await put({ ...e, manualOrder: [T("a")], bench: [T("b")] })).status).toBe(200);
+  });
+
+  it("changing the Mix's rules bumps the version, so a stale device gets 409 not 422 (N1)", async () => {
+    const { POST: addMixRule } = await import("../app/api/mixes/[id]/rules/route");
+    const [r] = await sql<{ id: string }[]>`
+      insert into rules (user_id, kind, n) values (${FAKE_ME}, 'pin_first', null) returning id`;
+    const res = await addMixRule(
+      req(`/api/mixes/${mixId}/rules`, cookie, {
+        method: "POST",
+        body: { ruleId: r!.id, trackUri: T("echo") },
+      }),
+      ctx(mixId),
+    );
+    expect(res.status).toBe(201);
+    const stale = await put({ version: 0, manualOrder: null, bench: [], rules: [] });
+    expect(stale.status).toBe(409);
+  });
+
+  it("pruneToSource is scoped to the user (N5)", async () => {
+    const { pruneToSource } = await import("./db/arrangement-repo");
+    await sql`update mixes set bench = ${[T("gone")]}::text[] where id = ${mixId}`;
+    const { id: other } = await insertTestUser(sql);
+    expect(await pruneToSource(sql, other, mixId, new Set())).toBe(false);
+    expect(await pruneToSource(sql, FAKE_ME, mixId, new Set())).toBe(true);
+  });
+
   it("a Repeat reaching one play deletes the Mix rule", async () => {
     const pin = await addRule("pin_first", null, T("drift"));
     const rep = await addRule("repeat", 2, T("echo"));
