@@ -76,6 +76,11 @@ body {
   transform-origin: left center;
   animation: rm-undo-timer 4s linear forwards;
 }
+/* Sonner pauses auto-dismiss on hover/focus; pause the line with it (R4). */
+[data-sonner-toaster]:hover .rm-undo-toast::after,
+[data-sonner-toaster]:focus-within .rm-undo-toast::after {
+  animation-play-state: paused;
+}
 @keyframes rm-undo-timer {
   from {
     transform: scaleX(1);
