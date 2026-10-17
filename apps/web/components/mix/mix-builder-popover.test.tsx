@@ -173,4 +173,37 @@ describe("song popover", () => {
     await waitFor(() => expect(screen.queryByTestId("song-popover")).toBeNull());
     expect(document.activeElement).toBe(btn);
   });
+
+  it("Change edits the rule in place (PATCH), keeping its priority position", async () => {
+    rulesOnServer = [mr("x", "every_n", 4, "a", 0), mr("y", "repeat", 2, "c", 1)];
+    const base = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation((url, init) => {
+      if (url === "/api/mixes/m1/rules/x" && init?.method === "PATCH") {
+        const b = JSON.parse(init.body as string) as { ruleId: string };
+        const row = { ...mr("x", "every_n", 5, "a", 0), ruleId: b.ruleId };
+        rulesOnServer = [row, rulesOnServer[1]!];
+        return Promise.resolve(Response.json({ rule: row }));
+      }
+      return base(url, init);
+    });
+    render(<MixBuilder mix={MIX} rules={rulesOnServer} maxRules={10} />);
+    const btn = (await screen.findAllByRole("button", { name: /^Slot \d+, A by Kavi$/ }))[0]!;
+    fireEvent.click(btn);
+    await screen.findByTestId("song-popover");
+    fireEvent.click(screen.getByRole("button", { name: "Change" }));
+    fireEvent.click(screen.getByRole("button", { name: "Increase" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(calls("PATCH", "/api/mixes/m1/rules/x")).toHaveLength(1));
+    expect(JSON.parse(calls("PATCH", "/api/mixes/m1/rules/x")[0]![1]!.body as string)).toEqual({
+      ruleId: "lib-every_n-5",
+    });
+    expect(calls("DELETE", "/api/mixes/m1/rules/x")).toHaveLength(0);
+    expect(calls("POST", "/api/mixes/m1/rules")).toHaveLength(0);
+    await waitFor(() =>
+      expect(screen.getAllByTestId("rule-card").map((c) => c.textContent)).toEqual([
+        expect.stringContaining("5") as unknown,
+        expect.stringContaining("Repeat") as unknown,
+      ]),
+    );
+  });
 });

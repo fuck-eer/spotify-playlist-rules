@@ -1,7 +1,10 @@
 import type { FakeSpotify } from "@rulemix/spotify/testing";
 import type postgres from "postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { DELETE as removeRule } from "../app/api/mixes/[id]/rules/[mixRuleId]/route";
+import {
+  PATCH as patchRule,
+  DELETE as removeRule,
+} from "../app/api/mixes/[id]/rules/[mixRuleId]/route";
 import { PUT as putOrder } from "../app/api/mixes/[id]/rules/order/route";
 import { GET as listRules, POST as addRule } from "../app/api/mixes/[id]/rules/route";
 import { GET as listSongs } from "../app/api/mixes/[id]/songs/route";
@@ -185,5 +188,47 @@ describe.skipIf(!reachable)("mix rules routes", () => {
       rules: MixRuleRow[];
     };
     expect(list.rules.map((r) => [r.id, r.position])).toEqual([[a.id, 0]]);
+  });
+
+  it("PATCH edits a rule in place: same id and priority position, deletions cleared", async () => {
+    const add = async (uri: string) =>
+      ((await (await post({ ruleId, trackUri: uri })).json()) as { rule: MixRuleRow }).rule;
+    const a = await add("spotify:track:echo");
+    const b = await add("spotify:track:drift");
+    const c = await add("spotify:track:sunrise");
+    await sql`update mix_rules set removed_plays = 1, deleted_copies = '{2}' where id = ${b.id}`;
+    const every4 = (await createRule(sql, FAKE_ME, { kind: "every_n", n: 4 })).id;
+    const patch = (id: string, body: unknown) =>
+      patchRule(
+        req(`/api/mixes/${mixId}/rules/${id}`, cookie, { method: "PATCH", body }),
+        ctx({ id: mixId, mixRuleId: id }),
+      );
+    const res = await patch(b.id, { ruleId: every4 });
+    expect(res.status).toBe(200);
+    const { rule } = (await res.json()) as { rule: MixRuleRow };
+    expect(rule).toMatchObject({
+      id: b.id,
+      ruleId: every4,
+      kind: "every_n",
+      n: 4,
+      position: 1,
+      trackUri: "spotify:track:drift",
+      removedPlays: 0,
+      deletedCopies: [],
+    });
+    const list = (await (
+      await listRules(req(`/api/mixes/${mixId}/rules`, cookie), ctx({ id: mixId }))
+    ).json()) as { rules: MixRuleRow[] };
+    expect(list.rules.map((r) => [r.id, r.position, r.kind])).toEqual([
+      [a.id, 0, "repeat"],
+      [b.id, 1, "every_n"],
+      [c.id, 2, "repeat"],
+    ]);
+    const archived = (await createRule(sql, FAKE_ME, { kind: "every_n", n: 5 })).id;
+    await updateRule(sql, FAKE_ME, archived, { archived: true });
+    expect(await errCode(await patch(b.id, { ruleId: archived }))).toBe("rule_archived");
+    expect((await patch("00000000-0000-4000-8000-000000000000", { ruleId: every4 })).status).toBe(
+      404,
+    );
   });
 });

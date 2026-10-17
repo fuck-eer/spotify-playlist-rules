@@ -152,3 +152,33 @@ export async function removeMixRule(
     return true;
   });
 }
+
+/**
+ * Edits a Mix rule in place (keeps id, song and priority position) by pointing it at another
+ * library Rule. Its deletions (removed plays, deleted copies) are cleared, as the spec says.
+ */
+export async function updateMixRule(
+  sql: postgres.Sql,
+  userId: string,
+  mixId: string,
+  mixRuleId: string,
+  ruleId: string,
+): Promise<{ ok: true; row: MixRuleRow } | { ok: false; code: "not_found" | "archived" }> {
+  if (!isUuid(mixId) || !isUuid(mixRuleId) || !isUuid(ruleId))
+    return { ok: false, code: "not_found" };
+  return sql.begin(async (tx) => {
+    if (!(await lockMix(tx, userId, mixId)))
+      return { ok: false as const, code: "not_found" as const };
+    const [rule] = await tx<{ archived_at: Date | null }[]>`
+      select archived_at from rules where id = ${ruleId} and user_id = ${userId}`;
+    if (!rule) return { ok: false as const, code: "not_found" as const };
+    if (rule.archived_at) return { ok: false as const, code: "archived" as const };
+    const res = await tx`
+      update mix_rules set rule_id = ${ruleId}, removed_plays = 0, deleted_copies = '{}'
+      where id = ${mixRuleId} and mix_id = ${mixId}`;
+    if (res.count === 0) return { ok: false as const, code: "not_found" as const };
+    await touch(tx, mixId);
+    const row = (await select(tx, userId, mixId)).find((r) => r.id === mixRuleId)!;
+    return { ok: true as const, row: toRow(row) };
+  });
+}
