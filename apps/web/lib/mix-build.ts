@@ -18,7 +18,7 @@ export async function buildForMix(
 ): Promise<{ result: BuildResult; rules: MixRuleRow[] }> {
   const available = new Set<string>();
   for (const t of source) if (t) available.add(t.uri);
-  await pruneToSource(sql, mix.id, available);
+  await pruneToSource(sql, userId, mix.id, available);
   const [rules, arrangement] = await Promise.all([
     listMixRules(sql, userId, mix.id),
     getArrangement(sql, userId, mix.id),

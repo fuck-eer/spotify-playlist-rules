@@ -36,7 +36,8 @@ export async function getArrangement(
 }
 
 export type PutResult =
-  { ok: true; version: number } | { ok: false; code: "not_found" | "conflict" | "unknown_rule" };
+  | { ok: true; version: number }
+  | { ok: false; code: "not_found" | "conflict" | "unknown_rule" | "invalid_rule_edit" };
 
 /**
  * One transaction: version check, write mixes + mix_rules, delete Repeat Mix rules whose
@@ -54,9 +55,17 @@ export async function putArrangement(
       select arrangement_version from mixes where id = ${mixId} and user_id = ${userId} for update`;
     if (!m) return { ok: false, code: "not_found" };
     if (m.arrangement_version !== input.version) return { ok: false, code: "conflict" };
-    const own = await tx<{ id: string }[]>`select id from mix_rules where mix_id = ${mixId}`;
-    const ownIds = new Set(own.map((r) => r.id));
-    if (input.rules.some((r) => !ownIds.has(r.id))) return { ok: false, code: "unknown_rule" };
+    const own = await tx<{ id: string; kind: string; n: number | null }[]>`
+      select mr.id, r.kind, r.n from mix_rules mr join rules r on r.id = mr.rule_id
+      where mr.mix_id = ${mixId}`;
+    const byId = new Map(own.map((r) => [r.id, r]));
+    if (input.rules.some((r) => !byId.has(r.id))) return { ok: false, code: "unknown_rule" };
+    // The engine throws on removed plays that don't fit the rule (B1).
+    const fits = (r: ArrangementInput["rules"][number]): boolean => {
+      const k = byId.get(r.id)!;
+      return k.kind === "repeat" ? r.removedPlays <= (k.n ?? 2) - 1 : r.removedPlays === 0;
+    };
+    if (!input.rules.every(fits)) return { ok: false, code: "invalid_rule_edit" };
     for (const r of input.rules) {
       await tx`update mix_rules set removed_plays = ${r.removedPlays},
         deleted_copies = ${r.deletedCopies}::int[] where id = ${r.id}`;
@@ -87,12 +96,13 @@ async function renumber(tx: postgres.TransactionSql, mixId: string): Promise<voi
 /** Source sync: drops URIs no longer in the Source from Manual order and Bench; true if changed. */
 export async function pruneToSource(
   sql: postgres.Sql,
+  userId: string,
   mixId: string,
   availableUris: Set<string>,
 ): Promise<boolean> {
   return sql.begin(async (tx) => {
     const [m] = await tx<{ manual_order: string[] | null; bench: string[] }[]>`
-      select manual_order, bench from mixes where id = ${mixId} for update`;
+      select manual_order, bench from mixes where id = ${mixId} and user_id = ${userId} for update`;
     if (!m) return false;
     const order = m.manual_order?.filter((u) => availableUris.has(u)) ?? null;
     const bench = m.bench.filter((u) => availableUris.has(u));
@@ -100,7 +110,7 @@ export async function pruneToSource(
       (m.manual_order?.length ?? 0) !== (order?.length ?? 0) || bench.length !== m.bench.length;
     if (!changed) return false;
     await tx`update mixes set manual_order = ${order}::text[], bench = ${bench}::text[],
-      arrangement_version = arrangement_version + 1 where id = ${mixId}`;
+      arrangement_version = arrangement_version + 1 where id = ${mixId} and user_id = ${userId}`;
     return true;
   });
 }

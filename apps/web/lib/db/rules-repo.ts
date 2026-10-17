@@ -90,7 +90,11 @@ export async function updateRule(
   const setN = patch.n !== undefined;
   const p = patch.pinned ?? null;
   const a = patch.archived ?? null;
-  const res = await sql`
+  return sql.begin(async (tx) => {
+    const [cur] = await tx<{ kind: string; n: number | null }[]>`
+    select kind, n from rules where id = ${id} and user_id = ${userId} for update`;
+    if (!cur) return null;
+    const res = await tx`
     update rules set
       kind = coalesce(${k}, kind),
       n = case when ${setN} then ${patch.n ?? null}::int else n end,
@@ -98,9 +102,22 @@ export async function updateRule(
       archived_at = case when ${a}::boolean is null then archived_at
                          when ${a}::boolean then coalesce(archived_at, now()) else null end,
       updated_at = now()
-    where id = ${id} and user_id = ${userId}`;
-  if (res.count === 0) return null;
-  return getRule(sql, userId, id);
+    where id = ${id} and user_id = ${userId}
+    returning kind, n`;
+    const next = res[0] as { kind: string; n: number | null } | undefined;
+    if (!next) return null;
+    if (next.kind !== cur.kind || next.n !== cur.n) {
+      // removed_plays / deleted_copies only make sense for the old kind and n (B1).
+      await tx`
+      update mixes set arrangement_version = arrangement_version + 1, updated_at = now()
+      where user_id = ${userId}
+        and id in (select mix_id from mix_rules where rule_id = ${id}
+                   and (removed_plays <> 0 or cardinality(deleted_copies) > 0))`;
+      await tx`update mix_rules set removed_plays = 0, deleted_copies = '{}'
+      where rule_id = ${id} and (removed_plays <> 0 or cardinality(deleted_copies) > 0)`;
+    }
+    return getRule(tx as unknown as postgres.Sql, userId, id);
+  });
 }
 
 export async function deleteRule(

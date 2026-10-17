@@ -27,7 +27,15 @@ function bodySchema() {
           .strict(),
       ),
     })
-    .strict();
+    .strict()
+    .refine(
+      (b) => {
+        const order = b.manualOrder ?? [];
+        const all = [...order, ...b.bench];
+        return new Set(all).size === all.length;
+      },
+      { message: "duplicate or overlapping URIs" },
+    );
 }
 
 /** Saves Manual order, Bench and deleted copies; stale version → 409 with the current state. */
@@ -52,6 +60,9 @@ export async function PUT(
     const r = await putArrangement(sql, user.id, id, body);
     if (r.ok) return Response.json({ version: r.version });
     if (r.code === "not_found") throw new HttpError(404, "not_found", "That mix doesn't exist.");
+    if (r.code === "invalid_rule_edit") {
+      throw new HttpError(422, "invalid_request", "That arrangement doesn't fit the rules.");
+    }
     if (r.code === "unknown_rule") {
       throw new HttpError(422, "invalid_request", "A rule doesn't belong to this mix.");
     }
