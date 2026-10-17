@@ -4,6 +4,8 @@ import { motion, useReducedMotion } from "motion/react";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 
+export const ANDROID_APK = "/android/rulemix.apk";
+
 export function SignIn({ error }: { error: string | null }) {
   const reduce = useReducedMotion();
   return (
@@ -26,6 +28,13 @@ export function SignIn({ error }: { error: string | null }) {
         <Button asChild size="lg" className="w-full max-w-[280px]">
           <a href="/api/auth/login">Continue with Spotify</a>
         </Button>
+        <a
+          href={ANDROID_APK}
+          download
+          className="mt-4 text-sm text-mut underline-offset-4 hover:text-tx hover:underline"
+        >
+          Get the Android app
+        </a>
         <p className="mt-[18px] max-w-[260px] font-mono text-[11px] text-dim">
           Dev mode: access is limited to the owner and 4 friends.
         </p>

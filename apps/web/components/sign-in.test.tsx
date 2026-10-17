@@ -17,6 +17,13 @@ describe("SignIn", () => {
     expect(screen.queryByText("Sign-in didn't finish. Try again.")).toBeNull();
   });
 
+  it("links to the Android APK", () => {
+    render(<SignIn error={null} />);
+    const a = screen.getByRole("link", { name: "Get the Android app" });
+    expect(a.getAttribute("href")).toBe("/android/rulemix.apk");
+    expect(a.hasAttribute("download")).toBe(true);
+  });
+
   it("shows the retry message after a failed sign-in", () => {
     render(<SignIn error="denied" />);
     expect(screen.getByText("Sign-in didn't finish. Try again.")).toBeTruthy();

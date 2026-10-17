@@ -18,4 +18,13 @@ describe("AccountMenu", () => {
     fireEvent.click(item);
     expect(submit).toHaveBeenCalled();
   });
+
+  it("offers the Android app download", async () => {
+    render(<AccountMenu />);
+    const trigger = screen.getByRole("button", { name: "Account" });
+    trigger.focus();
+    fireEvent.keyDown(trigger, { key: "Enter" });
+    const item = await screen.findByRole("menuitem", { name: "Get the Android app" });
+    expect(item.getAttribute("href")).toBe("/android/rulemix.apk");
+  });
 });
