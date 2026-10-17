@@ -189,4 +189,12 @@ describe("v2 motion fixes (F08)", () => {
       /prefers-reduced-motion: reduce\)\s*{\s*\[data-sonner-toast\]\.rm-undo-toast::after\s*{\s*display: none/,
     );
   });
+
+  it("the Undo timer line pauses while the toaster is hovered or focused (R4)", async () => {
+    const fs = await import("node:fs");
+    const css = fs.readFileSync(`${process.cwd()}/app/globals.css`, "utf8");
+    expect(css).toMatch(
+      /\[data-sonner-toaster\]:hover \.rm-undo-toast::after,\s*\[data-sonner-toaster\]:focus-within \.rm-undo-toast::after\s*{\s*animation-play-state: paused;/,
+    );
+  });
 });
