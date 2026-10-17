@@ -25,6 +25,14 @@ fun MixEditorRoute(container: AppContainer, mixId: String, onBack: () -> Unit) {
             c.error = null
         }
     }
+    LaunchedEffect(c.notice) {
+        c.notice?.let {
+            snackbar.showSnackbar(it)
+            c.notice = null
+        }
+    }
+    var slotFor by remember { mutableStateOf<GraphNode?>(null) }
+    val editor = remember(c) { c.asGraphEditor() }
     BackHandler(onBack = onBack)
     MixEditorScreen(
         state = c.state,
@@ -36,7 +44,12 @@ fun MixEditorRoute(container: AppContainer, mixId: String, onBack: () -> Unit) {
         onRemoveRule = c::removeRule,
         onKeepSourceOrder = c::setKeepSourceOrder,
         onReshuffle = c::reshuffle,
+        graph = { st, r -> EditableGraph(st, r, editor, !c.offline, onTap = { if (!c.offline) tapped = it }, onAskSlot = { slotFor = it }) },
     )
+    slotFor?.let { n ->
+        val total = c.result?.nodes?.count { it.role == com.rulemix.engine.NodeRole.ORIGINAL } ?: 1
+        SlotDialog(total, onMove = { c.moveToSlot(n, it); slotFor = null }, onDismiss = { slotFor = null })
+    }
     val node = tapped
     val s = c.state
     if (node != null && s != null) {
