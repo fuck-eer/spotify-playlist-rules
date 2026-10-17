@@ -7,6 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ANDROID_APK } from "@/components/sign-in";
 
 /** Header account menu (next to RulesIconLink); holds Sign out. */
 export function AccountMenu() {
@@ -33,6 +34,11 @@ export function AccountMenu() {
           </svg>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DropdownMenuItem asChild>
+            <a href={ANDROID_APK} download>
+              Get the Android app
+            </a>
+          </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => form.current?.requestSubmit()}>
             Sign out
           </DropdownMenuItem>
