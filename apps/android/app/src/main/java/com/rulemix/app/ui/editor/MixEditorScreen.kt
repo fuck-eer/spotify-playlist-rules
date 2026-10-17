@@ -55,6 +55,7 @@ object EditorStrings {
     const val NO_RULES = "No rules yet. Without one, you just get a copy."
     const val REMOVE = "Remove"
     const val LOADING = "Building the preview…"
+    const val BUILD_FAILED = "This mix couldn't be built. Try reloading."
     const val BENCH_HINT = "Moved to the bench. Benched songs stay out of the mix until you put them back."
     const val BENCHED = "Moved to the bench."
     const val COPY_DELETED = "Copy deleted."
@@ -115,10 +116,9 @@ fun MixEditorScreen(
             if (offline) OfflineBanner()
             if (state == null || result == null) {
                 Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                    Text(EditorStrings.LOADING, color = RmColor.textMuted)
+                    Text(if (state != null) EditorStrings.BUILD_FAILED else EditorStrings.LOADING, color = RmColor.textMuted)
                 }
-                return@Column
-            }
+            } else {
             Section(EditorStrings.SOURCE)
             Text(
                 EditorStrings.sourceCard(state.mix.source.name, state.source.count { it != null }),
@@ -150,6 +150,7 @@ fun MixEditorScreen(
                 TextButton(onClick = onReshuffle, enabled = editable, modifier = Modifier.padding(horizontal = 8.dp)) { Text(EditorStrings.RESHUFFLE) }
             }
             Spacer(Modifier.height(24.dp))
+            }
         }
     }
 }

@@ -58,3 +58,16 @@ class MixEditorScreenTest {
         compose.onNodeWithText("Remove").assertIsNotEnabled()
     }
 }
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [33])
+class BuildGuardTest {
+    @get:Rule val compose = createComposeRule()
+
+    @Test fun anUnbuildableStateShowsAnErrorInsteadOfCrashing() {
+        val bad = sampleState(rules = listOf(MixRule("p", "l", RuleKind.PIN_FIRST, null, 0, "spotify:track:a", removedPlays = 1)))
+        org.junit.Assert.assertNull(com.rulemix.app.domain.safeBuildFromState(bad))
+        compose.setContent { RulemixTheme { MixEditorScreen(bad, com.rulemix.app.domain.safeBuildFromState(bad), offline = false, onBack = {}) } }
+        compose.onNodeWithText(com.rulemix.app.ui.editor.EditorStrings.BUILD_FAILED).assertExists()
+    }
+}

@@ -16,7 +16,7 @@ import com.rulemix.app.domain.ArrangementOps
 import com.rulemix.engine.GraphNode
 import com.rulemix.engine.NodeRole
 import com.rulemix.engine.RuleKind
-import com.rulemix.app.domain.buildFromState
+import com.rulemix.app.domain.safeBuildFromState
 import com.rulemix.engine.BuildResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -59,7 +59,7 @@ class EditorController(
     /** Swap in a new state (optimistic edit, 409 server state, reload). */
     fun replace(s: MixState, cache: Boolean = true) {
         state = s
-        result = buildFromState(s)
+        result = safeBuildFromState(s)
         if (cache) repo.remember(s)
     }
 

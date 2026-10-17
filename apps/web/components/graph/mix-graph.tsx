@@ -19,7 +19,7 @@ import { BenchCluster } from "./bench-cluster";
 import { BenchPanel } from "./bench-panel";
 import { BenchTarget } from "./bench-target";
 import type { MixState } from "@/lib/mix-state";
-import { buildFromState } from "@/lib/use-mix-state";
+import { safeBuildFromState } from "@/lib/use-mix-state";
 import { GraphPanel } from "./graph-panel";
 import type { GraphLayout } from "./layout";
 
@@ -188,7 +188,9 @@ export function MixGraph({
       if (!s || !from || !to || from.key === to.key) return;
       const order = moveOriginal(lineOf(nodes), from.uri, to.uri);
       const next = { ...draftOf(s), manualOrder: order };
-      const moved = buildFromState(applyDraft(s, next)).nodes.find((n) => n.key === from.key);
+      const moved = (safeBuildFromState(applyDraft(s, next))?.nodes ?? []).find(
+        (n) => n.key === from.key,
+      );
       void commit(next, COPY.moved((moved?.firstSlot ?? 0) + 1), COPY.moveUndone);
     },
     [nodes, commit],
@@ -237,7 +239,9 @@ export function MixGraph({
       const s = stateRef.current;
       if (!s) return;
       const next = restoreFromBench(draftOf(s), uri, index, lineOf(nodes));
-      const back = buildFromState(applyDraft(s, next)).nodes.find((n) => n.key === `b:${uri}`);
+      const back = (safeBuildFromState(applyDraft(s, next))?.nodes ?? []).find(
+        (n) => n.key === `b:${uri}`,
+      );
       setBenchOpen(false);
       void commit(next, COPY.backIn((back?.firstSlot ?? 0) + 1), COPY.backWhere);
     },

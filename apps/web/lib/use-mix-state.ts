@@ -28,6 +28,18 @@ export function buildFromState(s: MixState): BuildResult {
   });
 }
 
+export const BUILD_FAILED = "This mix couldn't be built. Try reloading.";
+
+/** buildFromState, or null when the engine rejects the state (never crashes the editor). */
+export function safeBuildFromState(s: MixState): BuildResult | null {
+  try {
+    return buildFromState(s);
+  } catch (e) {
+    console.error("[mix] build failed", e);
+    return null;
+  }
+}
+
 /** GET /api/mixes/{id}/state, built locally; refetches on window focus and on `tick`. */
 export function useMixState(mixId: string | null, tick = 0) {
   const [s, setS] = useState<MixStateStatus>({ status: "loading", state: null });
@@ -72,7 +84,17 @@ export function useMixState(mixId: string | null, tick = 0) {
     return () => window.removeEventListener("focus", onFocus);
   }, [reload]);
 
-  const result = useMemo(() => (s.state ? buildFromState(s.state) : null), [s.state]);
+  const result = useMemo(() => (s.state ? safeBuildFromState(s.state) : null), [s.state]);
   const replace = useCallback((state: MixState) => setS({ status: "ready", state }), []);
+  if (s.state && !result) {
+    return {
+      status: "error" as const,
+      state: s.state,
+      error: BUILD_FAILED,
+      result,
+      reload,
+      replace,
+    };
+  }
   return { ...s, result, reload, replace };
 }

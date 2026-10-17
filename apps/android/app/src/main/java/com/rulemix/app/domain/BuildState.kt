@@ -17,3 +17,7 @@ fun buildFromState(s: MixState): BuildResult = build(
         bench = s.arrangement.bench,
     ),
 )
+
+/** [buildFromState], or null when the engine rejects the state (the editor shows an error, never crashes). */
+fun safeBuildFromState(s: MixState): BuildResult? =
+    try { buildFromState(s) } catch (e: IllegalArgumentException) { null } catch (e: IllegalStateException) { null }
