@@ -44,6 +44,7 @@ export const COPY = {
   playDeleted: (n: number) => `One play deleted. Rule #${n} still applies.`,
   startWith: "Start with plays once. Remove the rule instead.",
   backWhere: "Back where it was",
+  undoFailed: "Couldn't undo. Try again.",
   backIn: (k: number) => `Back in at slot ${k}`,
 };
 const TARGET_SLOP = 16;
@@ -174,7 +175,7 @@ export function MixGraph({
               onClick: () => void commit(prev, undoMessage, undoMessage, false),
             },
           });
-        } else toast(message, { duration: TOAST_MS });
+        } else if (message) toast(message, { duration: TOAST_MS });
         return true;
       }
       if ("conflict" in r) toast(COPY.conflict);
@@ -201,6 +202,49 @@ export function MixGraph({
     [nodes, commit],
   );
 
+  /** Re-adds a Mix rule the server dropped, at `index`, with its removed plays. */
+  const readdRule = useCallback(
+    async (rule: MixState["rules"][number], index: number) => {
+      const json = { "content-type": "application/json" };
+      try {
+        const res = await fetch(`/api/mixes/${mixId}/rules`, {
+          method: "POST",
+          headers: json,
+          body: JSON.stringify({ ruleId: rule.ruleId, trackUri: rule.trackUri }),
+        });
+        if (!res.ok) throw new Error("add failed");
+        const row = ((await res.json()) as { rule: { id: string } }).rule;
+        const ids = (stateRef.current?.rules ?? []).map((r) => r.id).filter((id) => id !== row.id);
+        if (index < ids.length) {
+          ids.splice(index, 0, row.id);
+          await fetch(`/api/mixes/${mixId}/rules/order`, {
+            method: "PUT",
+            headers: json,
+            body: JSON.stringify({ ids }),
+          });
+        }
+        const fresh = (await (await fetch(`/api/mixes/${mixId}/state`)).json()) as MixState;
+        stateRef.current = fresh;
+        replace(fresh);
+        const d = draftOf(fresh);
+        await commit(
+          {
+            ...d,
+            rules: d.rules.map((r) =>
+              r.id === row.id ? { ...r, removedPlays: rule.removedPlays } : r,
+            ),
+          },
+          COPY.backWhere,
+          COPY.backWhere,
+          false,
+        );
+        onRulesChanged?.();
+      } catch {
+        toast.error(COPY.undoFailed);
+      }
+    },
+    [mixId, replace, commit, onRulesChanged],
+  );
   const remove = useCallback(
     (node: GraphNode) => {
       const s = stateRef.current;
@@ -220,13 +264,21 @@ export function MixGraph({
         const rule = s.rules[node.ruleIndex];
         if (!rule) return;
         const last = node.plays === 2;
+        const index = node.ruleIndex;
+        const message = COPY.playDeleted(index + 1);
         void commit(
           deleteRepeatPlay(cur, rule.id),
-          COPY.playDeleted(node.ruleIndex + 1),
+          last ? "" : message,
           COPY.backWhere,
           !last,
         ).then((ok) => {
-          if (ok && last) onRulesChanged?.();
+          if (!ok || !last) return;
+          onRulesChanged?.();
+          // The server dropped the Mix rule; Undo re-adds it at its place (N2).
+          toast(message, {
+            duration: TOAST_MS,
+            action: { label: "Undo", onClick: () => void readdRule(rule, index) },
+          });
         });
       } else {
         const msg = benchedThisSession ? COPY.benched : COPY.benchedFirst;
@@ -234,7 +286,7 @@ export function MixGraph({
         void commit(benchOriginal(cur, node.uri), msg, COPY.backWhere);
       }
     },
-    [commit, onRulesChanged],
+    [commit, onRulesChanged, readdRule],
   );
   if (actionsRef) actionsRef.current = { remove };
 

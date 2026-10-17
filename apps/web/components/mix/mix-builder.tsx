@@ -404,12 +404,20 @@ export function MixBuilder({
 
   // A Repeat rule deleted server-side (down to 1 play) leaves the RULES list too.
   const serverRuleIds = graph.state?.rules.map((r) => r.id).join(",");
+  const graphRulesRef = useRef(graph.state?.rules);
+  graphRulesRef.current = graph.state?.rules;
   useEffect(() => {
     if (serverRuleIds === undefined) return;
     const ids = new Set(serverRuleIds ? serverRuleIds.split(",") : []);
-    setRules((rs) =>
-      rs.some((r) => !ids.has(r.id)) && ids.size < rs.length ? rs.filter((r) => ids.has(r.id)) : rs,
-    );
+    setRules((rs) => {
+      if (rs.some((r) => !ids.has(r.id)) && ids.size < rs.length) {
+        return rs.filter((r) => ids.has(r.id));
+      }
+      // A rule re-added by Undo (N2) comes back from the server: take the server list.
+      const server = graphRulesRef.current;
+      if (server && ids.size > rs.length && rs.every((r) => ids.has(r.id))) return server;
+      return rs;
+    });
   }, [serverRuleIds]);
 
   const [confirmOrder, setConfirmOrder] = useState<"reshuffle" | "reset" | null>(null);
