@@ -1,6 +1,8 @@
 "use client";
 
+import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
+import { useMotion } from "@/lib/motion";
 import { placeholder } from "./cover";
 
 export interface BenchRow {
@@ -30,6 +32,7 @@ export function BenchPanel({
   const [menu, setMenu] = useState<string | null>(null);
   const [slot, setSlot] = useState<{ value: string; error: string | null } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const m = useMotion();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -50,8 +53,13 @@ export function BenchPanel({
   }, [onClose]);
 
   return (
-    <div
+    <motion.div
       ref={ref}
+      initial={m.reduced ? false : { scale: 0.3, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      exit={{ scale: m.reduced ? 1 : 0.92, opacity: 0, transition: m.easeIn(0.15) }}
+      transition={{ ...m.pop, opacity: m.reduced ? { duration: 0 } : { duration: 0.16 } }}
+      style={{ originX: 1, originY: 1 }}
       role="dialog"
       aria-label="On the bench"
       data-testid="bench-panel"
@@ -154,6 +162,6 @@ export function BenchPanel({
           </ul>
         </>
       )}
-    </div>
+    </motion.div>
   );
 }
