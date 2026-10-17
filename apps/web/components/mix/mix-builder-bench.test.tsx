@@ -167,6 +167,75 @@ describe("bench and delete", () => {
     ).toBe(1);
   });
 
+  it("Undo after the last-but-one Repeat play re-adds the rule at its place (N2)", async () => {
+    const two = [RULES[0]!, RULES[1]!, { ...RULES[2]!, removedPlays: 1 }];
+    state = STATE({}, two);
+    let added = false;
+    fetchMock.mockImplementation((url, init) => {
+      if (url === "/api/mixes/m1/state") return Promise.resolve(Response.json(state));
+      if (url === "/api/mixes/m1/arrangement") {
+        const body = JSON.parse(init!.body as string) as {
+          version: number;
+          rules: { id: string; removedPlays: number }[];
+        };
+        const rp = body.rules.find((r) => r.id === "rp");
+        if (rp && rp.removedPlays >= 2)
+          state = STATE({ version: body.version + 1 }, two.slice(0, 2));
+        else if (added)
+          state = STATE({ version: body.version + 1 }, [
+            two[0]!,
+            two[1]!,
+            { ...two[2]!, id: "rp2", removedPlays: 1 },
+          ]);
+        return Promise.resolve(Response.json({ version: body.version + 1 }));
+      }
+      if (url === "/api/mixes/m1/rules" && init?.method === "POST") {
+        added = true;
+        state = STATE({ version: state.arrangement.version + 1 }, [
+          two[0]!,
+          two[1]!,
+          { ...two[2]!, id: "rp2", removedPlays: 0 },
+        ]);
+        return Promise.resolve(
+          Response.json(
+            { rule: { ...two[2]!, id: "rp2", removedPlays: 0, position: 2 } },
+            { status: 201 },
+          ),
+        );
+      }
+      if (url === "/api/mixes/m1/rules/order") return Promise.resolve(Response.json({ ok: true }));
+      return Promise.resolve(Response.json({}, { status: 404 }));
+    });
+    await ready();
+    fireEvent.keyDown(cover(`b:${T("d")}`), { key: "Delete" });
+    await waitFor(() =>
+      expect(toastMock).toHaveBeenCalledWith(
+        "One play deleted. Rule #3 still applies.",
+        expect.objectContaining({ action: expect.objectContaining({ label: "Undo" }) as unknown }),
+      ),
+    );
+    const call = toastMock.mock.calls.find(
+      (c) => c[0] === "One play deleted. Rule #3 still applies.",
+    )!;
+    (call[1] as { action: { onClick: () => void } }).action.onClick();
+    await waitFor(() => {
+      const post = fetchMock.mock.calls.find(
+        ([u, i]) => u === "/api/mixes/m1/rules" && i?.method === "POST",
+      );
+      expect(JSON.parse(post![1]!.body as string)).toEqual({ ruleId: "lib-rp", trackUri: T("d") });
+    });
+    await waitFor(() => {
+      const last = puts().at(-1)!;
+      expect(
+        (last.rules as { id: string; removedPlays: number }[]).find((r) => r.id === "rp2")!
+          .removedPlays,
+      ).toBe(1);
+    });
+    await waitFor(() =>
+      expect(toastMock).toHaveBeenCalledWith("Back where it was", expect.anything()),
+    );
+  });
+
   it("popover shows Move to bench / Delete this copy, none for Start with", async () => {
     await ready();
     fireEvent.click(cover(`b:${T("a")}`));
