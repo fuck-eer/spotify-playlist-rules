@@ -29,6 +29,8 @@ export const DRAG_SLOP = 8;
 export const DROP_RADIUS = 70;
 const EDGE = 48;
 const TOAST_MS = 4000;
+/** Toasts with Undo show a 2 px timer line that shrinks over TOAST_MS (#27; globals.css). */
+export const UNDO_TOAST = "rm-undo-toast";
 
 export const COPY = {
   moved: (k: number) => `Moved to slot ${k}. Order saved.`,
@@ -177,6 +179,7 @@ export function MixGraph({
         if (undoable) {
           toast(message, {
             duration: TOAST_MS,
+            className: UNDO_TOAST,
             action: {
               label: "Undo",
               onClick: () => void commit(prev, undoMessage, undoMessage, false),
@@ -289,6 +292,7 @@ export function MixGraph({
           // The server dropped the Mix rule; Undo re-adds it at its place (N2).
           toast(message, {
             duration: TOAST_MS,
+            className: UNDO_TOAST,
             action: { label: "Undo", onClick: () => void readdRule(rule, index) },
           });
         });

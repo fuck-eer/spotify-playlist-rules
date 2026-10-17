@@ -15,7 +15,9 @@ test("long-press drag reorders, saves, and persists after reload", async ({ page
   await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 10 });
   await expect(page.getByText(/Drop to play it here/)).toBeVisible();
   await page.mouse.up();
-  await expect(page.getByText("Moved to slot 3. Order saved.")).toBeVisible();
+  await expect(
+    page.locator("[data-sonner-toast]").getByText("Moved to slot 3. Order saved."),
+  ).toBeVisible();
   const want = ["Slot 1, Drift by Oren", "Slot 2, Sunrise by Kavi", "Slot 3, Echo by Kavi"];
   await expect.poll(() => coverLabels(page)).toEqual(want);
   await page.reload();

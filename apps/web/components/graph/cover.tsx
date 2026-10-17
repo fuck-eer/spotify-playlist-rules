@@ -8,6 +8,7 @@ import { NEUTRAL_DOT, ruleColor } from "@/lib/palette";
 import { coverLabel, slotLabel, type RuleMeta, type TrackMeta } from "./labels";
 
 export const COVER = 48;
+const easeOutT = (duration: number) => ({ duration, ease: [0.2, 0.8, 0.2, 1] as const });
 const RING = 3;
 
 /** Deterministic gradient placeholder for missing or loading art. */
@@ -46,6 +47,8 @@ export function Cover({
   enterDelay,
   animateLayout = true,
   dragOffset,
+  flyFrom,
+  sweep,
   node,
   track,
   rules,
@@ -61,8 +64,14 @@ export function Cover({
   animateLayout?: boolean | undefined;
   /** Finger offset while dragged (a transform, so it never triggers a layout animation). */
   dragOffset?: { x: number; y: number } | undefined;
+  /** New rule copy: fly in from the source cover (#4), offset from this slot, and stagger. */
+  flyFrom?: { dx: number; dy: number; delay: number } | undefined;
+  /** The ring just took a rule colour: sweep it in (#7). */
+  sweep?: boolean | undefined;
 }) {
   const m = useMotion();
+  const fly = m.reduced ? undefined : flyFrom;
+  const doSweep = !m.reduced && sweep === true && node.ruleIndex !== null;
   const deleting = node.role === "copy" || node.plays > 1;
   const [loaded, setLoaded] = useState(false);
   const isCopy = node.role === "copy";
@@ -73,19 +82,34 @@ export function Cover({
       data-testid="cover"
       data-key={node.key}
       className="absolute flex w-[72px] -translate-x-1/2 -translate-y-1/2 list-none flex-col items-center"
-      style={{ ...style, x: dragOffset?.x ?? 0, y: dragOffset?.y ?? 0 } as MotionStyle}
+      data-fly={fly ? `${Math.round(fly.dx)},${Math.round(fly.dy)}` : undefined}
+      data-sweep={doSweep ? "1" : undefined}
+      style={style as MotionStyle}
       layout="position"
       layoutDependency={
         animateLayout ? `${String(style?.left)},${String(style?.top)}` : "measuring"
       }
-      initial={m.reduced ? false : { scale: 0.5, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
+      initial={
+        m.reduced
+          ? false
+          : fly
+            ? { x: fly.dx, y: fly.dy, scale: 0.6, opacity: 0.2 }
+            : { scale: 0.5, opacity: 0 }
+      }
+      animate={{ scale: 1, opacity: 1, x: dragOffset?.x ?? 0, y: dragOffset?.y ?? 0 }}
       exit={
         m.reduced
           ? { opacity: 0, transition: { duration: 0 } }
           : { scale: deleting ? 0.6 : 0.2, opacity: 0, transition: easeIn(0.18) }
       }
-      transition={{ ...m.pop, delay: m.reduced ? 0 : (enterDelay ?? 0), layout: m.snap }}
+      transition={{
+        ...m.pop,
+        delay: m.reduced ? 0 : (fly?.delay ?? enterDelay ?? 0),
+        layout: m.snap,
+        // Follow the finger 1:1 while lifted; on drop/cancel spring from the finger to the slot (#10/#11).
+        x: lifted || m.reduced ? { duration: 0 } : { ...m.snap, delay: fly?.delay ?? 0 },
+        y: lifted || m.reduced ? { duration: 0 } : { ...m.snap, delay: fly?.delay ?? 0 },
+      }}
     >
       <button
         ref={buttonRef}
@@ -131,8 +155,24 @@ export function Cover({
             node.ruleIndex === null ? "plain" : node.ruleIndices.length > 1 ? "split" : "rule"
           }
           className="absolute inset-0 rounded-full"
-          style={{ background: ringBackground(node) }}
+          style={{ background: doSweep ? NEUTRAL_DOT : ringBackground(node) }}
         />
+        {doSweep ? (
+          // Rule colour sweeps clockwise over the plain ring (#7): 320 ms (+140 ms on a new copy).
+          <motion.span
+            aria-hidden
+            data-testid="ring-sweep"
+            className="absolute inset-0 rounded-full"
+            style={{ background: ringBackground(node) }}
+            initial={{
+              clipPath: "polygon(50% 50%, 50% 0%, 50% 0%, 50% 0%, 50% 0%, 50% 0%, 50% 0%)",
+            }}
+            animate={{
+              clipPath: "polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%, 50% 0%)",
+            }}
+            transition={{ ...easeOutT(0.32), delay: isCopy ? 0.14 : 0 }}
+          />
+        ) : null}
         <span
           aria-hidden
           className="absolute overflow-hidden rounded-full"
@@ -158,13 +198,16 @@ export function Cover({
           </span>
         ) : null}
         {chipIndex !== null ? (
-          <span
+          <motion.span
             aria-hidden
             className="absolute -right-2 -top-1.5 rounded-full px-1 font-mono text-[10px] font-bold text-black"
             style={{ background: ruleColor(chipIndex) }}
+            initial={doSweep ? { scale: 0 } : false}
+            animate={{ scale: 1 }}
+            transition={{ ...m.pop, delay: doSweep ? 0.2 : 0 }}
           >
             #{chipIndex + 1}
-          </span>
+          </motion.span>
         ) : null}
       </button>
       <span

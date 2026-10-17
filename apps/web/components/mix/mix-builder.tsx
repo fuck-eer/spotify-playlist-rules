@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { TrackItem } from "@rulemix/spotify";
 import { Reorder } from "motion/react";
+import { AnimatePresence } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -717,51 +718,54 @@ export function MixBuilder({
                 Reset to rule order
               </button>
             ) : null}
-            {tapped && graph.state ? (
-              <SongPopover
-                uri={tapped.node.uri}
-                track={graph.state.tracks[tapped.node.uri]}
-                anchor={tapped.el}
-                shiftedFrom={tapped.node.shiftedFrom}
-                songRules={rules
-                  .map((r, index) => ({
-                    mixRuleId: r.id,
-                    index,
-                    kind: r.kind,
-                    n: r.n,
-                    uri: r.trackUri,
-                  }))
-                  .filter((r) => r.uri === tapped.node.uri)}
-                ruleCount={rules.length}
-                maxRules={maxRules}
-                onAdd={(kind, n) => void addRuleForSong(kind, n, tapped.node.uri)}
-                onRemove={(id) => {
-                  const r = rules.find((x) => x.id === id);
-                  if (r) void onRemove(r);
-                }}
-                onChange={(id, kind, n) => void changeRule(id, kind, n)}
-                onClose={() => setTapped(null)}
-                footer={(() => {
-                  const node = tapped.node;
-                  const pin =
-                    node.role === "copy" &&
-                    rules.find((r) => r.id === node.key.split(":")[1])?.kind === "pin_first";
-                  if (pin) return null;
-                  return (
-                    <button
-                      type="button"
-                      className="mt-2 w-full rounded-full bg-s1 px-3 py-2 text-sm font-semibold"
-                      onClick={() => {
-                        setTapped(null);
-                        graphActions.current?.remove(node);
-                      }}
-                    >
-                      {removeKind(node) === "bench" ? "Move to bench" : "Delete this copy"}
-                    </button>
-                  );
-                })()}
-              />
-            ) : null}
+            <AnimatePresence>
+              {tapped && graph.state ? (
+                <SongPopover
+                  key={tapped.node.key}
+                  uri={tapped.node.uri}
+                  track={graph.state.tracks[tapped.node.uri]}
+                  anchor={tapped.el}
+                  shiftedFrom={tapped.node.shiftedFrom}
+                  songRules={rules
+                    .map((r, index) => ({
+                      mixRuleId: r.id,
+                      index,
+                      kind: r.kind,
+                      n: r.n,
+                      uri: r.trackUri,
+                    }))
+                    .filter((r) => r.uri === tapped.node.uri)}
+                  ruleCount={rules.length}
+                  maxRules={maxRules}
+                  onAdd={(kind, n) => void addRuleForSong(kind, n, tapped.node.uri)}
+                  onRemove={(id) => {
+                    const r = rules.find((x) => x.id === id);
+                    if (r) void onRemove(r);
+                  }}
+                  onChange={(id, kind, n) => void changeRule(id, kind, n)}
+                  onClose={() => setTapped(null)}
+                  footer={(() => {
+                    const node = tapped.node;
+                    const pin =
+                      node.role === "copy" &&
+                      rules.find((r) => r.id === node.key.split(":")[1])?.kind === "pin_first";
+                    if (pin) return null;
+                    return (
+                      <button
+                        type="button"
+                        className="mt-2 w-full rounded-full bg-s1 px-3 py-2 text-sm font-semibold"
+                        onClick={() => {
+                          setTapped(null);
+                          graphActions.current?.remove(node);
+                        }}
+                      >
+                        {removeKind(node) === "bench" ? "Move to bench" : "Delete this copy"}
+                      </button>
+                    );
+                  })()}
+                />
+              ) : null}
+            </AnimatePresence>
             {unavailableOpen && graph.result ? (
               <UnavailableCard
                 count={graph.result.stats.skippedUnavailable}

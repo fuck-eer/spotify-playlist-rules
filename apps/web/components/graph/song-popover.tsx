@@ -4,7 +4,7 @@ import type { RuleKind } from "@rulemix/rules-engine";
 import { MinusIcon, PinIcon, PlusIcon, RepeatIcon, StepForwardIcon, XIcon } from "lucide-react";
 import { motion, type MotionStyle } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useMotion } from "@/lib/motion";
+import { easeIn, useMotion } from "@/lib/motion";
 import { ruleColor } from "@/lib/palette";
 import { placeholder } from "./cover";
 import { ruleName, type TrackMeta } from "./labels";
@@ -131,16 +131,26 @@ export function SongPopover({
   return (
     <>
       {!wide ? (
-        <div
+        <motion.div
           data-testid="sheet-scrim"
           className="fixed inset-0 z-40 bg-black/60"
           onClick={onClose}
+          initial={m.reduced ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0, transition: m.reduced ? { duration: 0 } : { duration: 0.2 } }}
         />
       ) : null}
       <motion.div
         ref={card}
         initial={m.reduced ? false : wide ? { scale: 0.3, opacity: 0 } : { y: "100%", opacity: 1 }}
         animate={{ scale: 1, y: 0, opacity: 1 }}
+        exit={
+          m.reduced
+            ? { opacity: 0, transition: { duration: 0 } }
+            : wide
+              ? { opacity: 0, scale: 0.92, transition: easeIn(0.15) }
+              : { y: "100%", transition: easeIn(0.2) }
+        }
         transition={
           wide ? { ...m.pop, opacity: m.reduced ? { duration: 0 } : { duration: 0.16 } } : m.sheet
         }
