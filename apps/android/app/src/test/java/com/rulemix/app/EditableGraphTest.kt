@@ -71,4 +71,12 @@ class EditableGraphTest {
         compose.setContent { RulemixTheme { EditableGraph(s, buildFromState(s), editor, editable = false, onTap = {}) } }
         assertEquals(emptyList<Any>(), labels("tap-b:spotify:track:a"))
     }
+
+    @Test fun theLastOutcomeIsAPoliteLiveRegionForTalkBack() {
+        val s = sampleState()
+        compose.setContent { RulemixTheme { EditableGraph(s, buildFromState(s), editor, editable = true, onTap = {}, announcement = "Moved to slot 3. Order saved.") } }
+        val n = compose.onNodeWithTag("graph-announcer", useUnmergedTree = true).fetchSemanticsNode()
+        assertEquals(androidx.compose.ui.semantics.LiveRegionMode.Polite, n.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.LiveRegion))
+        compose.onNodeWithText("Moved to slot 3. Order saved.", useUnmergedTree = true).assertExists()
+    }
 }

@@ -56,6 +56,7 @@ object EditorStrings {
     const val REMOVE = "Remove"
     const val LOADING = "Building the preview…"
     const val BUILD_FAILED = "This mix couldn't be built. Try reloading."
+    fun moved(k: Int) = "Moved to slot $k. Order saved."
     const val BENCH_HINT = "Moved to the bench. Benched songs stay out of the mix until you put them back."
     const val BENCHED = "Moved to the bench."
     const val COPY_DELETED = "Copy deleted."
