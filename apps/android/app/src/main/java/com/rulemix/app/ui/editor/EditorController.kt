@@ -9,6 +9,12 @@ import com.rulemix.app.data.MixRepository
 import com.rulemix.app.data.MixRule
 import com.rulemix.app.data.MixState
 import com.rulemix.app.data.RulesRepository
+import com.rulemix.app.data.ArrangementRepository
+import com.rulemix.app.data.ArrangementSave
+import com.rulemix.app.domain.ArrangementDraft
+import com.rulemix.app.domain.ArrangementOps
+import com.rulemix.engine.GraphNode
+import com.rulemix.engine.NodeRole
 import com.rulemix.engine.RuleKind
 import com.rulemix.app.domain.buildFromState
 import com.rulemix.engine.BuildResult
@@ -24,7 +30,11 @@ class EditorController(
     val api: Api,
     private val scope: CoroutineScope,
     private val rulesRepo: RulesRepository = RulesRepository(api),
+    private val arrangements: ArrangementRepository = ArrangementRepository(api),
 ) {
+    /** One-line feedback (snackbar) for arrangement edits. */
+    var notice by mutableStateOf<String?>(null)
+    private var benchedOnce = false
     var maxRules by mutableStateOf(10)
         private set
     var state by mutableStateOf<MixState?>(null)
@@ -121,4 +131,87 @@ class EditorController(
             }
         }
     }
+
+    /** Optimistic arrangement save; a 409 swaps in the server state. */
+    private fun commit(f: (ArrangementDraft) -> ArrangementDraft, message: String? = null) {
+        val s = state ?: return
+        val d = f(ArrangementOps.draftOf(s))
+        replace(ArrangementOps.apply(s, d))
+        if (message != null) notice = message
+        scope.launch {
+            try {
+                when (val r = arrangements.put(mixId, s.arrangement.version, d)) {
+                    is ArrangementSave.Saved -> state?.let { replace(it.copy(arrangement = it.arrangement.copy(version = r.version))) }
+                    is ArrangementSave.Stale -> {
+                        replace(r.state)
+                        notice = ArrangementRepository.STALE
+                    }
+                }
+                // The server drops a Repeat rule at 1 play.
+                if (d.rules.any { e -> s.rules.any { it.id == e.id && it.kind == RuleKind.REPEAT && (it.n ?: 2) - e.removedPlays <= 1 } }) reload()
+            } catch (e: ApiException) {
+                replace(s)
+                error = e.message
+            }
+        }
+    }
+
+    /** What removing [node] does: bench, delete copy, delete one play; null when refused (Start with copy). */
+    fun removeKind(node: GraphNode): RemoveKind? {
+        val s = state ?: return null
+        return when {
+            node.role == NodeRole.COPY -> {
+                val r = node.ruleIndex?.let { s.rules.getOrNull(it) } ?: return null
+                if (r.kind == RuleKind.PIN_FIRST) null else RemoveKind.DELETE_COPY
+            }
+            node.plays >= 2 -> RemoveKind.DELETE_PLAY
+            else -> RemoveKind.BENCH
+        }
+    }
+
+    fun remove(node: GraphNode) {
+        val s = state ?: return
+        when (removeKind(node)) {
+            RemoveKind.BENCH -> {
+                val msg = if (!benchedOnce) EditorStrings.BENCH_HINT else EditorStrings.BENCHED
+                benchedOnce = true
+                commit({ ArrangementOps.benchOriginal(it, node.uri) }, msg)
+            }
+            RemoveKind.DELETE_COPY -> {
+                val r = s.rules[node.ruleIndex!!]
+                commit({ ArrangementOps.deleteCopy(it, r.id, node.copyIndex ?: 0) }, EditorStrings.COPY_DELETED)
+            }
+            RemoveKind.DELETE_PLAY -> {
+                val r = s.rules.firstOrNull { it.kind == RuleKind.REPEAT && it.trackUri == node.uri } ?: return
+                commit({ ArrangementOps.deleteRepeatPlay(it, r.id) }, EditorStrings.PLAY_DELETED)
+            }
+            null -> notice = EditorStrings.CANT_REMOVE
+        }
+    }
+
+    /** Moves an Original onto the line position held by [target] (sets a Manual order). */
+    fun move(node: GraphNode, target: GraphNode) {
+        val nodes = result?.nodes ?: return
+        if (node.role != NodeRole.ORIGINAL || target.role != NodeRole.ORIGINAL) return
+        val line = ArrangementOps.lineOf(nodes)
+        commit({ it.copy(manualOrder = ArrangementOps.moveOriginal(line, node.uri, target.uri)) })
+    }
+
+    /** Move to line slot [slot] (1-based), for TalkBack "Move to slot…". */
+    fun moveToSlot(node: GraphNode, slot: Int) {
+        val nodes = result?.nodes ?: return
+        val line = ArrangementOps.lineOf(nodes)
+        val target = line.getOrNull((slot - 1).coerceIn(0, line.size - 1)) ?: return
+        nodes.firstOrNull { it.role == NodeRole.ORIGINAL && it.uri == target }?.let { move(node, it) }
+    }
+
+    fun restore(uri: String, index: Int = Int.MAX_VALUE) {
+        val line = result?.nodes?.let(ArrangementOps::lineOf) ?: return
+        commit({ ArrangementOps.restoreFromBench(it, uri, index, line) }, EditorStrings.RESTORED)
+    }
+
+    /** Clears the Manual order (back to the rules' order); the Bench stays. */
+    fun resetOrder() = commit({ it.copy(manualOrder = null) }, EditorStrings.RESET_DONE)
 }
+
+enum class RemoveKind { BENCH, DELETE_COPY, DELETE_PLAY }
