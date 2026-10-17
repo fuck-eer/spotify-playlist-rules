@@ -10,6 +10,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.animation.core.VisibilityThreshold
 
 /** The four v2 motion tokens (motion-spec.md, ADR-0031). */
 object Motion {
@@ -17,6 +18,7 @@ object Motion {
     val pop = spring<Float>(dampingRatio = 0.71f, stiffness = 800f)
     val sheet = spring<Float>(dampingRatio = 0.94f, stiffness = 500f)
     val easeOut = tween<Float>(240, easing = CubicBezierEasing(.2f, .8f, .2f, 1f))
+    val snapSize = spring(dampingRatio = 0.82f, stiffness = 600f, visibilityThreshold = androidx.compose.ui.unit.IntSize.VisibilityThreshold)
     const val LONG_PRESS_MS = 350L
     const val REFLOW_MS = 260
 }
