@@ -325,8 +325,8 @@ export function MixBuilder({
   const [unavailableOpen, setUnavailableOpen] = useState(false);
 
   /** Library rule for kind/n (created if missing), then bound to the song in this Mix. */
-  async function addRuleForSong(kind: RuleKind, n: number | null, uri: string): Promise<boolean> {
-    if (!mixId) return false;
+  /** The library Rule for kind/n, created when missing; null on failure (toasted). */
+  async function resolveRuleId(kind: RuleKind, n: number | null): Promise<string | null> {
     let lib = library.status === "ready" ? library.rules : null;
     if (!lib) {
       const res = await fetch("/api/rules");
@@ -341,11 +341,18 @@ export function MixBuilder({
       });
       if (!res.ok) {
         toast.error(await errorMessage(res));
-        return false;
+        return null;
       }
       ruleId = ((await res.json()) as { rule: RuleRow }).rule.id;
       setLibrary({ status: "idle", rules: [] });
     }
+    return ruleId;
+  }
+
+  async function addRuleForSong(kind: RuleKind, n: number | null, uri: string): Promise<boolean> {
+    if (!mixId) return false;
+    const ruleId = await resolveRuleId(kind, n);
+    if (!ruleId) return false;
     const res = await fetch(`/api/mixes/${mixId}/rules`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -362,16 +369,26 @@ export function MixBuilder({
     return true;
   }
 
-  async function changeRule(
-    mixRuleId: string,
-    kind: RuleKind,
-    n: number,
-    uri: string,
-  ): Promise<void> {
+  async function changeRule(mixRuleId: string, kind: RuleKind, n: number): Promise<void> {
     const r = rules.find((x) => x.id === mixRuleId);
-    if (!r) return;
-    await onRemove(r);
-    await addRuleForSong(kind, n, uri);
+    if (!r || !mixId) return;
+    const ruleId = await resolveRuleId(kind, n);
+    if (!ruleId) return;
+    // In place: the rule keeps its priority position (and colour).
+    const res = await fetch(`/api/mixes/${mixId}/rules/${mixRuleId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ruleId }),
+    });
+    if (!res.ok) {
+      toast.error(await errorMessage(res));
+      return;
+    }
+    const { rule } = (await res.json()) as { rule: MixRuleRow };
+    setRules((rs) =>
+      rs.map((x) => (x.id === mixRuleId ? { ...rule, songName: rule.songName ?? x.songName } : x)),
+    );
+    refreshPreview();
   }
 
   async function onKeepSourceOrder(next: boolean): Promise<void> {
@@ -714,7 +731,7 @@ export function MixBuilder({
                   const r = rules.find((x) => x.id === id);
                   if (r) void onRemove(r);
                 }}
-                onChange={(id, kind, n) => void changeRule(id, kind, n, tapped.node.uri)}
+                onChange={(id, kind, n) => void changeRule(id, kind, n)}
                 onClose={() => setTapped(null)}
                 footer={(() => {
                   const node = tapped.node;
