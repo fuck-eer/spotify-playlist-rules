@@ -49,3 +49,51 @@ export function pickDropTarget(
 export function sameArrangement(a: ArrangementDraft, b: ArrangementDraft): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
+
+function withRule(
+  a: ArrangementDraft,
+  ruleId: string,
+  f: (r: ArrangementDraft["rules"][number]) => ArrangementDraft["rules"][number],
+): ArrangementDraft {
+  return { ...a, rules: a.rules.map((r) => (r.id === ruleId ? f(r) : r)) };
+}
+
+/** Benches an Original: it leaves the line (and any Manual order); its rule copies stay. */
+export function benchOriginal(a: ArrangementDraft, uri: string): ArrangementDraft {
+  if (a.bench.includes(uri)) return a;
+  return {
+    ...a,
+    bench: [...a.bench, uri],
+    manualOrder: a.manualOrder ? a.manualOrder.filter((u) => u !== uri) : null,
+  };
+}
+
+/** Deletes Rule copy `k` of a Mix rule. */
+export function deleteCopy(a: ArrangementDraft, ruleId: string, k: number): ArrangementDraft {
+  return withRule(a, ruleId, (r) =>
+    r.deletedCopies.includes(k)
+      ? r
+      : { ...r, deletedCopies: [...r.deletedCopies, k].sort((x, y) => x - y) },
+  );
+}
+
+/** Deletes one play of a Repeat stack (at 1 play the server drops the Mix rule). */
+export function deleteRepeatPlay(a: ArrangementDraft, ruleId: string): ArrangementDraft {
+  return withRule(a, ruleId, (r) => ({ ...r, removedPlays: r.removedPlays + 1 }));
+}
+
+/** Takes a song off the bench and inserts it into `line` at `index`; sets a Manual order. */
+export function restoreFromBench(
+  a: ArrangementDraft,
+  uri: string,
+  index: number,
+  line: string[],
+): ArrangementDraft {
+  const rest = line.filter((u) => u !== uri);
+  const i = Math.max(0, Math.min(rest.length, index));
+  return {
+    ...a,
+    bench: a.bench.filter((u) => u !== uri),
+    manualOrder: [...rest.slice(0, i), uri, ...rest.slice(i)],
+  };
+}

@@ -40,7 +40,7 @@ import {
 import { Loader2Icon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import type { PlaybackOutcome, RunKind, SaveRunRow } from "@/lib/db/save-runs-repo";
-import { MixGraph } from "@/components/graph/mix-graph";
+import { MixGraph, removeKind, type GraphActions } from "@/components/graph/mix-graph";
 import { SongPopover, UnavailableCard } from "@/components/graph/song-popover";
 import type { GraphNode, RuleKind } from "@rulemix/rules-engine";
 import { useMixState } from "@/lib/use-mix-state";
@@ -92,6 +92,7 @@ export function MixBuilder({
   const [busy, setBusy] = useState(false);
   const [nameInvalid, setNameInvalid] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
+  const graphActions = useRef<GraphActions | null>(null);
   const [targetId, setTargetId] = useState<string | null>(mix?.targetPlaylistId ?? null);
   const [savedDialog, setSavedDialog] = useState(false);
   const [played, setPlayed] = useState<{ playlistId: string; playback: PlaybackOutcome } | null>(
@@ -384,6 +385,16 @@ export function MixBuilder({
     refreshPreview();
   }
 
+  // A Repeat rule deleted server-side (down to 1 play) leaves the RULES list too.
+  const serverRuleIds = graph.state?.rules.map((r) => r.id).join(",");
+  useEffect(() => {
+    if (serverRuleIds === undefined) return;
+    const ids = new Set(serverRuleIds ? serverRuleIds.split(",") : []);
+    setRules((rs) =>
+      rs.some((r) => !ids.has(r.id)) && ids.size < rs.length ? rs.filter((r) => ids.has(r.id)) : rs,
+    );
+  }, [serverRuleIds]);
+
   const [confirmOrder, setConfirmOrder] = useState<"reshuffle" | "reset" | null>(null);
   const hasManualOrder = graph.state?.arrangement.manualOrder != null;
 
@@ -669,6 +680,8 @@ export function MixBuilder({
               replace={graph.replace}
               onTap={(node, el) => setTapped({ node, el })}
               onSkipped={() => setUnavailableOpen(true)}
+              actionsRef={graphActions}
+              onRulesChanged={() => void graph.reload()}
             />
             {hasManualOrder ? (
               <button
@@ -703,6 +716,25 @@ export function MixBuilder({
                 }}
                 onChange={(id, kind, n) => void changeRule(id, kind, n, tapped.node.uri)}
                 onClose={() => setTapped(null)}
+                footer={(() => {
+                  const node = tapped.node;
+                  const pin =
+                    node.role === "copy" &&
+                    rules.find((r) => r.id === node.key.split(":")[1])?.kind === "pin_first";
+                  if (pin) return null;
+                  return (
+                    <button
+                      type="button"
+                      className="mt-2 w-full rounded-full bg-s1 px-3 py-2 text-sm font-semibold"
+                      onClick={() => {
+                        setTapped(null);
+                        graphActions.current?.remove(node);
+                      }}
+                    >
+                      {removeKind(node) === "bench" ? "Move to bench" : "Delete this copy"}
+                    </button>
+                  );
+                })()}
               />
             ) : null}
             {unavailableOpen && graph.result ? (
