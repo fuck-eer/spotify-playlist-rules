@@ -2,6 +2,7 @@ package com.rulemix.app.data
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -26,6 +27,7 @@ sealed class ApiException(message: String) : Exception(message) {
     }
 }
 
+@OptIn(ExperimentalSerializationApi::class) // explicitNulls
 val RmJson = Json { ignoreUnknownKeys = true; explicitNulls = false; encodeDefaults = true }
 
 /** rulemix HTTP client: JSON, Bearer interceptor, 401 → token cleared (signed out). */
