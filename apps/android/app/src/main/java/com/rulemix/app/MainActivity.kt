@@ -41,6 +41,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        if (container.tokens.token.value != null && SpotifyLogin.isSpotifyInstalled(packageManager)) {
+            lifecycleScope.launch { runCatching { container.remote.connect() } }
+        }
+    }
+
+    override fun onStop() {
+        container.remote.disconnect()
+        super.onStop()
+    }
+
     @Deprecated("AuthorizationClient delivers its result here")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         @Suppress("DEPRECATION")
