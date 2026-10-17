@@ -1,6 +1,10 @@
 package com.rulemix.app.ui.editor
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import com.rulemix.app.ui.motion.Motion
+import com.rulemix.app.ui.motion.motionSpec
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -103,16 +107,17 @@ fun EditableGraph(
                     }
                 }
                 val isDragged = dragging == node.key
+                val lift by animateFloatAsState(if (isDragged) 1.14f else 1f, motionSpec(Motion.snap), label = "lift")
                 Box(
                     Modifier
                         .testTag("tap-${node.key}")
                         .zIndex(if (isDragged) 1f else 0f)
                         .graphicsLayer {
+                            scaleX = lift
+                            scaleY = lift
                             if (isDragged) {
                                 translationX = offset.x
                                 translationY = offset.y
-                                scaleX = 1.08f
-                                scaleY = 1.08f
                             }
                         }
                         .semantics { customActions = actions }
@@ -153,7 +158,7 @@ fun EditableGraph(
         val bench = state.arrangement.bench
         if (bench.isNotEmpty()) {
             Row(
-                Modifier.fillMaxWidth().padding(8.dp).background(RmColor.surface2, RoundedCornerShape(10.dp))
+                Modifier.fillMaxWidth().padding(8.dp).animateContentSize(if (com.rulemix.app.ui.motion.reducedMotion()) androidx.compose.animation.core.snap() else Motion.snapSize).background(RmColor.surface2, RoundedCornerShape(10.dp))
                     .clickableNoRipple { benchOpen = true }.padding(12.dp).testTag("bench-cluster"),
                 verticalAlignment = Alignment.CenterVertically,
             ) { Text(EditorStrings.benchCount(bench.size), style = RmType.body.copy(color = RmColor.text)) }
