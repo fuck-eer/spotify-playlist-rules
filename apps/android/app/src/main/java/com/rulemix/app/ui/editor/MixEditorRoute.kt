@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.material3.SnackbarHostState
+import kotlinx.coroutines.launch
 import com.rulemix.app.AppContainer
 import com.rulemix.engine.GraphNode
 
@@ -34,7 +35,22 @@ fun MixEditorRoute(container: AppContainer, mixId: String, onBack: () -> Unit) {
     var slotFor by remember { mutableStateOf<GraphNode?>(null) }
     val editor = remember(c) { c.asGraphEditor() }
     BackHandler(onBack = onBack)
+    var playBusy by remember { mutableStateOf(false) }
+    var playResult by remember { mutableStateOf<com.rulemix.app.playback.PlayResult?>(null) }
+    fun play() {
+        playBusy = true
+        scope.launch {
+            val r = container.play.play(mixId)
+            playBusy = false
+            if (r is com.rulemix.app.playback.PlayResult.Failed) {
+                val a = snackbar.showSnackbar(r.message, actionLabel = PlayStrings.RETRY)
+                if (a == androidx.compose.material3.SnackbarResult.ActionPerformed) play()
+            } else playResult = r
+        }
+    }
+    PlayDialog(playBusy, playResult) { playResult = null }
     MixEditorScreen(
+        onPlay = { if (!playBusy) play() },
         state = c.state,
         result = c.result,
         offline = c.offline,
