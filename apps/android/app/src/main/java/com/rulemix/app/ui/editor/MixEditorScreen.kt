@@ -122,20 +122,7 @@ fun MixEditorScreen(
             if (state.rules.isEmpty()) {
                 Text(EditorStrings.NO_RULES, style = RmType.body.copy(color = RmColor.textMuted), modifier = Modifier.padding(horizontal = 16.dp))
             }
-            state.rules.forEachIndexed { i, r ->
-                val song = r.songName ?: state.tracks[r.trackUri]?.name ?: "Unknown song"
-                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).testTag("rule-row"), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.background(ruleColor(i), RoundedCornerShape(999.dp)).padding(horizontal = 6.dp)) {
-                        Text("#${i + 1}", style = RmType.slot.copy(color = RmColor.onPlay))
-                    }
-                    Spacer(Modifier.padding(4.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(ruleName(RuleMeta(r.kind, r.n)), style = RmType.rowTitle.copy(color = RmColor.text))
-                        Text(song, style = RmType.hint.copy(color = RmColor.textMuted))
-                    }
-                    TextButton(onClick = { onRemoveRule(r.id) }, enabled = editable) { Text(EditorStrings.REMOVE) }
-                }
-            }
+            RulesSection(state, editable, onRemoveRule)
             extraRules()
             Section(EditorStrings.OPTIONS)
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
