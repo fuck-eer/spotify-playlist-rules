@@ -13,16 +13,21 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest moves to 26.04 on 2026-10-19.
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: apps/android
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
-      - uses: android-actions/setup-android@v3
+      # v4 dropped the removed legacy "tools" package from the defaults (v3 failed:
+      # "Failed to find package tools"). Packages listed explicitly so it can't come back.
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
       - uses: gradle/actions/setup-gradle@v3
       - run: ./gradlew --console=plain :app:assembleDebug :app:testDebugUnitTest :engine:test
