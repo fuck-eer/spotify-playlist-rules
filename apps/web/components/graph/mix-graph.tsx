@@ -19,6 +19,7 @@ import { BenchCluster } from "./bench-cluster";
 import { BenchPanel } from "./bench-panel";
 import { BenchTarget } from "./bench-target";
 import type { MixState } from "@/lib/mix-state";
+import { ArrangementQueue } from "@/lib/arrangement-queue";
 import { safeBuildFromState } from "@/lib/use-mix-state";
 import { GraphPanel } from "./graph-panel";
 import type { GraphLayout } from "./layout";
@@ -139,7 +140,19 @@ export function MixGraph({
 
   const nodes = useMemo(() => result?.nodes ?? [], [result]);
 
-  /** Optimistic local apply + PUT; 409 replaces with the server state. */
+  /** Saves one at a time per Mix (S1); optimistic apply; a real 409 replaces with the server state. */
+  const queue = useMemo(
+    () =>
+      new ArrangementQueue({
+        get: () => stateRef.current,
+        set: (next) => {
+          stateRef.current = next;
+          replace(next);
+        },
+        save: (version, draft) => saveArrangement(mixId, version, draft),
+      }),
+    [mixId, replace],
+  );
   const commit = useCallback(
     async (
       next: ArrangementDraft,
@@ -150,11 +163,8 @@ export function MixGraph({
       const s = stateRef.current;
       if (!s) return false;
       const prev = draftOf(s);
-      replace(applyDraft(s, next));
-      const r = await saveArrangement(mixId, s.arrangement.version, next);
+      const r = await queue.commit(next);
       if (r.ok) {
-        const cur = stateRef.current ?? s;
-        replace({ ...cur, arrangement: { ...cur.arrangement, version: r.version } });
         onSaved?.();
         if (undoable) {
           toast(message, {
@@ -167,16 +177,11 @@ export function MixGraph({
         } else toast(message, { duration: TOAST_MS });
         return true;
       }
-      if (r.conflict) {
-        replace(r.state);
-        toast(COPY.conflict);
-      } else {
-        replace(s);
-        toast.error(r.message);
-      }
+      if ("conflict" in r) toast(COPY.conflict);
+      else if ("error" in r) toast.error(r.error);
       return false;
     },
-    [mixId, replace, onSaved],
+    [queue, onSaved],
   );
   const api = useMemo<GraphApi>(() => ({ commit }), [commit]);
 

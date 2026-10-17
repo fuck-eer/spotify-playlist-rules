@@ -82,4 +82,29 @@ class ArrangementRepositoryTest {
         assertEquals(listOf("spotify:track:d"), c.state!!.arrangement.bench)
         assertEquals(ArrangementRepository.STALE, c.notice)
     }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test fun twoEditsBeforeTheFirstResponseSaveInOrderOnTheReturnedVersion() {
+        val scope = TestScope(StandardTestDispatcher())
+        val c = EditorController("m1", MixRepository(api, MemoryCache(), FakeConnectivity(true)), api, scope)
+        c.replace(sampleState(), cache = false) // version 3
+        server.enqueue(MockResponse().setBody("""{"version":4}""").setBodyDelay(200, java.util.concurrent.TimeUnit.MILLISECONDS))
+        server.enqueue(MockResponse().setBody("""{"version":5}"""))
+        val nodes = c.result!!.nodes
+        c.remove(nodes.first { it.uri == "spotify:track:c" })
+        c.remove(nodes.first { it.uri == "spotify:track:d" })
+        assertEquals(listOf("spotify:track:c", "spotify:track:d"), c.state!!.arrangement.bench)
+        val until = System.currentTimeMillis() + 5000
+        while (c.state!!.arrangement.version != 5 && System.currentTimeMillis() < until) {
+            scope.advanceUntilIdle()
+            Thread.sleep(10)
+        }
+        val first = RmJson.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
+        val second = RmJson.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
+        assertEquals(3, first["version"]!!.jsonPrimitive.int)
+        assertEquals(4, second["version"]!!.jsonPrimitive.int)
+        assertEquals(5, c.state!!.arrangement.version)
+        assertEquals(listOf("spotify:track:c", "spotify:track:d"), c.state!!.arrangement.bench)
+        assertTrue(c.notice != ArrangementRepository.STALE)
+    }
 }
